@@ -8,6 +8,7 @@ __pycache__/
 
 # config
 constant.py
+auth_config.py
 
 # Distribution / packaging
 .Python
