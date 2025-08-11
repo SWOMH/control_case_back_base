@@ -21,7 +21,7 @@ class HistoryBalanceDeductions(Base):
     __tablename__ = "history_deductions"
     id: Mapped[intpk]
     period: Mapped[datetime] = mapped_column(DateTime, nullable=False) 
-    value: Mapped[Decimal] = mapped_column(Numeric(10,2), default=0)    
+    value: Mapped[Decimal] = mapped_column(Numeric(10,2), default=0)
     user_id: Mapped[int] = mapped_column(ForeignKey('public.users.id', ondelete='CASCADE'), nullable=False)
     type: Mapped[int] = mapped_column(ForeignKey('public.type_deduction.id'))
 
@@ -33,9 +33,9 @@ class HistoryBalanceReplenishment(Base): # пополнение
     __tablename__ = "history_replenishment"
     id: Mapped[intpk]
     period: Mapped[datetime] = mapped_column(DateTime, nullable=False) 
-    value: Mapped[Decimal] = mapped_column(Numeric(10,2), default=0)    
+    value: Mapped[Decimal] = mapped_column(Numeric(10,2), default=0)
     user_id: Mapped[int] = mapped_column(ForeignKey('public.users.id', ondelete='CASCADE'), nullable=False)
     type: Mapped[int] = mapped_column(ForeignKey('public.type_replenishment.id'))
 
-    
+
     user = relationship("Users", back_populates="history_balance")

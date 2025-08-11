@@ -13,6 +13,8 @@ class Documents(Base):
     document_description: Mapped[str | None]
     path: Mapped[str]
     instruction: Mapped[str] # инструкция для клиента
+    price: Mapped[Decimal] = mapped_column(Numeric(10,2), default=0)
+    sale: Mapped[bool]
     
     field = relationship("DocumentFields", back_populates="documents")
     tags = relationship("DocumentTags", back_populates="documents")
