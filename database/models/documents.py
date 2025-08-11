@@ -12,9 +12,10 @@ class Documents(Base):
     document_name: Mapped[str]
     document_description: Mapped[str | None]
     path: Mapped[str]
-    instruction: Mapped[str] # инструкция для клиента
-    price: Mapped[Decimal] = mapped_column(Numeric(10,2), default=0)
+    instruction: Mapped[str | None] # инструкция для клиента
+    price: Mapped[Decimal | None] = mapped_column(Numeric(10,2), nullable=True)
     sale: Mapped[bool]
+    limit_free: Mapped[int | None]
     
     field = relationship("DocumentFields", back_populates="documents")
     tags = relationship("DocumentTags", back_populates="documents")
@@ -35,3 +36,19 @@ class DocumentTags(Base):
     tag_name: Mapped[str]
     document_id: Mapped[int] = mapped_column(ForeignKey("public.documents.id"))
     documents = relationship("Documents", back_populates="field")
+
+class PurchasedDocuments(Base):
+    __tablename__ = "purchased_documents"
+    id: Mapped[intpk]
+    document_id: Mapped[int]
+    user_id: Mapped[int]
+    amount_sum: Mapped[int | None] # за какую сумму куплен документ
+
+
+class DocumentCreated(Base):
+    __tablename__ = "document_created"
+    id: Mapped[intpk]
+    document_id: Mapped[int]
+    user_id: Mapped[int]
+    created: Mapped[bool]
+    
