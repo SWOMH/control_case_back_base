@@ -14,9 +14,9 @@ class Users(Base):
     id: Mapped[intpk]
     login: Mapped[str]
     password: Mapped[str]    
-    surname: Mapped[str] # фамилия
-    first_name: Mapped[str] # имя
-    patronymic: Mapped[str] # отчество
+    surname: Mapped[str]  # фамилия
+    first_name: Mapped[str]  # имя
+    patronymic: Mapped[str]  # отчество
     client: Mapped[bool]
     balance: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)  # остаток на балансе 
     last_activity: Mapped[datetime]    

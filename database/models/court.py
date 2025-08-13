@@ -11,6 +11,7 @@ class CourtUser(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey('public.users.id', ondelete='CASCADE'), nullable=False)
     href_case: Mapped[str]
 
+
 class Stage(Base):
     __tablename__ = "court"
     id: Mapped[intpk]
