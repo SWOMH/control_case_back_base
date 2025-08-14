@@ -1,24 +1,107 @@
 from datetime import datetime
 from decimal import Decimal
-
-from sqlalchemy import DateTime, ForeignKey, Numeric, Text
+import enum
+from sqlalchemy import (
+    Integer, String, DateTime, Numeric, ForeignKey, Text, Enum, JSON, Index
+)
 from database.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.types import intpk
 
-class TypeOperation(Base):
-    __tablename__ = "type_operation"
-    id: Mapped[intpk]
-    type_name: Mapped[str]
+
+# === Enums ===
+class TransactionStatus(str, enum.Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    REFUNDED = "refunded"
 
 
-class HistoryBalanceOperations(Base):  # пополнение
-    __tablename__ = "history_balance_operations"
-    id: Mapped[intpk]
-    period: Mapped[datetime] = mapped_column(DateTime, nullable=False) 
-    value: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
-    user_id: Mapped[int] = mapped_column(ForeignKey('public.users.id', ondelete='CASCADE'), nullable=False)
-    type: Mapped[int] = mapped_column(ForeignKey('public.type_replenishment.id'))
+class TransactionDirection(str, enum.Enum):
+    CREDIT = "credit"  # пополнение, + к балансу
+    DEBIT = "debit"    # списание, - от баланса
 
 
-    user = relationship("Users", back_populates="history_balance")
+# === Тип операции (справочник) ===
+class OperationType(Base):
+    """справочник типов операций (используется для аналитики и понимания, почему изменился баланс)."""
+    __tablename__ = "operation_type"
+    id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)  # например: 'manual_topup', 'invoice_payment'
+    title: Mapped[str] = mapped_column(String(255), nullable=False)             # человеко-читаемое имя
+    direction: Mapped[TransactionDirection] = mapped_column(
+        Enum(TransactionDirection), nullable=False, default=TransactionDirection.CREDIT
+    )
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# === Текущий баланс пользователя (быстрая выборка) ===
+class UserBalance(Base):
+    """это таблица, где хранится актуальный баланс (быстрая выборка при оплате).
+    Изменяем её атомарно (в транзакции) при каждой успешной операции."""
+    __tablename__ = "user_balance"
+    id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False,
+                                         unique=True)
+    # Основной баланс (можно добавить reserved_balance для холда/резерва)
+    balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))
+    reserved_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="RUB")  # ISO-4217
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+    # связь к юзеру (если нужна)
+    # user = relationship("User", back_populates="balance")  # при наличии модели User
+
+
+# === Журнал операций (ledger) ===
+class BalanceOperation(Base):
+    """это журнал (ledger) всех операций: пополнений, списаний, возвратов.
+    Всегда записываем операцию (immutable запись), указываем направление (credit/debit) и snapshot"""
+    __tablename__ = "balance_operation"
+    id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False)
+    operation_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("operation_type.id"), nullable=False)
+    direction: Mapped[TransactionDirection] = mapped_column(Enum(TransactionDirection), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2),
+                                            nullable=False)  # положительное число; sign определяется direction
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="RUB")  # валюта. По сути не нужна, но пускай будет
+    balance_after: Mapped[Decimal | None] = mapped_column(Numeric(18, 2),
+                                                          nullable=True)  # snapshot баланса после операции
+    status: Mapped[TransactionStatus] = mapped_column(Enum(TransactionStatus), nullable=False,
+                                                      default=TransactionStatus.COMPLETED)  # важен для обработки асинхронных платежей:
+                                                                                            # сначала pending, потом completed/failed.
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    # внешние ссылки / идемпотентность
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)  # id от платежного шлюза / invoice
+    reference_type: Mapped[str | None] = mapped_column(String(64), nullable=True)  # например 'invoice', 'subscription'
+    reference_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # JSON — полезно хранить необязательные данные от платежного шлюза (raw payload).
+
+
+    operation_type = relationship("OperationType")
+    # user = relationship("User", back_populates="balance_operations")
+
+
+
+# Индексы
+Index("ix_balance_operation_user_id_created_at", BalanceOperation.user_id, BalanceOperation.created_at)
+Index("ix_balance_operation_external_id", BalanceOperation.external_id)
+Index("ix_user_balance_user_id", UserBalance.user_id, unique=True)
+
+
+# === Логика, чтобы не забыть ===
+# Всегда делать операцию в транзакции:
+#
+# Создать запись BalanceOperation со статусом PENDING.
+#
+# Попытаться обновить UserBalance.balance
+#
+# Если успех — установить balance_after и пометить BalanceOperation.status = COMPLETED. Иначе — FAILED.
+#
+# Для списаний проверять balance >= amount (или использовать reserved_balance при предварительной блокировке средств).
+#
+# В логике возвратов/рефандов создавать обратную операцию (direction противоположный) и помечать reference на оригинал.
+
