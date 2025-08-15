@@ -41,11 +41,11 @@ class UserBalance(Base):
     Изменяем её атомарно (в транзакции) при каждой успешной операции."""
     __tablename__ = "user_balance"
     id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False,
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="CASCADE"), nullable=False,
                                          unique=True)
     # Основной баланс (можно добавить reserved_balance для холда/резерва)
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))
-    reserved_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))
+    reserved_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0.00"))  # Зарезервированные средства
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="RUB")  # ISO-4217
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
@@ -59,7 +59,7 @@ class BalanceOperation(Base):
     Всегда записываем операцию (immutable запись), указываем направление (credit/debit) и snapshot"""
     __tablename__ = "balance_operation"
     id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="CASCADE"), nullable=False)
     operation_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("operation_type.id"), nullable=False)
     direction: Mapped[TransactionDirection] = mapped_column(Enum(TransactionDirection), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2),
@@ -80,10 +80,8 @@ class BalanceOperation(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # JSON — полезно хранить необязательные данные от платежного шлюза (raw payload).
 
-
     operation_type = relationship("OperationType")
     # user = relationship("User", back_populates="balance_operations")
-
 
 
 # Индексы
