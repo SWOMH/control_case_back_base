@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, Text, JSON, Column, Integer, Boolean, String, Table
 from database.base import Base
@@ -13,15 +14,27 @@ class Users(Base):
     __tablename__ = "users"
     id: Mapped[intpk]
     login: Mapped[str]
+    email: Mapped[Optional[str]] = mapped_column(String(254), nullable=True, unique=True)
     password: Mapped[str]    
     surname: Mapped[str]  # фамилия
     first_name: Mapped[str]  # имя
     patronymic: Mapped[str]  # отчество
-    client: Mapped[bool]
-    balance: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)  # остаток на балансе 
-    last_activity: Mapped[datetime]    
-    
-    history_balance = relationship("HistoryBalance", back_populates='user')
+    is_client: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # флаг клиента
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_staff: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # доступ к админке
+    is_support: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_banned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_lawyer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    last_activity: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    locale: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    timezone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    preferences: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # history_balance = relationship("HistoryBalance", back_populates='user')
     activity = relationship("Activity", back_populates="user")
     groups = relationship("Group", secondary="user_group_association", back_populates="users")
 
@@ -57,12 +70,20 @@ group_permission_association = Table(
     Column('permission', String, nullable=False)
 )
 
+# -----------------------
+# Activity / Audit
+# -----------------------
 class Activity(Base):
-    __tablename__ = "users_activity"
-    id: Mapped[intpk]
-    user_id: Mapped[int] = mapped_column(ForeignKey('public.users.id', ondelete='CASCADE'), nullable=False)
+    __tablename__ = "user_activity"
+    id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="CASCADE"), nullable=False)
+    path: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)   # страница или endpoint
+    ip_address: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    extra: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
     user = relationship("Users", back_populates="activity")
-    page: Mapped[JSON]
     
 
 
