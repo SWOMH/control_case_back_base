@@ -13,7 +13,7 @@ class CourtUser(Base):
 
 
 class Stage(Base):
-    __tablename__ = "court"
+    __tablename__ = "court_stage"
     id: Mapped[intpk]
     court_id: Mapped[int] = mapped_column(ForeignKey('public.court.id', ondelete='CASCADE'), nullable=False)
     stage_name: Mapped[str]

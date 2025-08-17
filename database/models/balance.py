@@ -78,7 +78,7 @@ class BalanceOperation(Base):
     reference_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # JSON — полезно хранить необязательные данные от платежного шлюза (raw payload).
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # JSON — полезно хранить необязательные данные от платежного шлюза (raw payload).
 
     # operation_type = relationship("OperationType")
     # user = relationship("User", back_populates="balance_operations")
