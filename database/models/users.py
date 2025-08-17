@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
+from sqlalchemy import Index
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, Text, JSON, Column, Integer, Boolean, String, Table
 from database.base import Base

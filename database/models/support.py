@@ -6,6 +6,7 @@ from sqlalchemy import (
     Integer, String, Boolean, DateTime, ForeignKey, Text, Enum, BigInteger
 )
 import enum
+from sqlalchemy import Index, desc
 
 
 class SenderType(str, enum.Enum):
@@ -24,18 +25,23 @@ class MessageStatus(str, enum.Enum):
 class ReasonCloseChat(Base):
     """Причина по которой оператор закрыл чат"""
     __tablename__ = "reason_close_chat"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[intpk]
     reason: Mapped[str] = mapped_column(String(255), nullable=False)
 
 class SupportHistoryDate(Base):
     """Даты захода в чат оператора и выхода из чата"""
     __tablename__ = "support_history_date"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[intpk]
     date_join: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     date_leave: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+
 class Chat(Base):
     __tablename__ = "chat"
+    __table_args__ = {'schema': 'public',
+                      'extend_existing': True}
     id: Mapped[intpk]
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
     user_support_id: Mapped[int | None] = mapped_column(
@@ -52,7 +58,7 @@ class Chat(Base):
 
 
 class ChatMessage(Base):
-    __tablename__ = "chat"
+    __tablename__ = "chat_messages"
     id: Mapped[intpk]
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
     sender_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=True)
@@ -65,6 +71,10 @@ class ChatMessage(Base):
     chat = relationship("Chat", back_populates="messages")
     attachments = relationship("ChatAttachment", back_populates="message", cascade="all, delete-orphan")
     read_receipts = relationship("MessageReadReceipt", back_populates="message", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index('ix_chat_messages_chat_id_created_at', 'chat_id', desc('created_at')),
+    )
 
 
 class ChatAttachment(Base):
@@ -97,12 +107,6 @@ class ChatParticipant(Base):
     left_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     chat = relationship("Chat", back_populates="participants")
 
-
-class SupportHistoryDate(Base):
-    __tablename__ = "support_history_date"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    date_join: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    date_leave: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class SupportHistoryChat(Base):

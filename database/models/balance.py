@@ -80,7 +80,7 @@ class BalanceOperation(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # JSON — полезно хранить необязательные данные от платежного шлюза (raw payload).
 
-    operation_type = relationship("OperationType")
+    # operation_type = relationship("OperationType")
     # user = relationship("User", back_populates="balance_operations")
 
 
