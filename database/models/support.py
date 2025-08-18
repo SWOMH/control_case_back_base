@@ -29,6 +29,7 @@ class ReasonCloseChat(Base):
     id: Mapped[intpk]
     reason: Mapped[str] = mapped_column(String(255), nullable=False)
 
+
 class SupportHistoryDate(Base):
     """Даты захода в чат оператора и выхода из чата"""
     __tablename__ = "support_history_date"
@@ -60,7 +61,7 @@ class Chat(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     id: Mapped[intpk]
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False)
     sender_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=True)
     sender_type: Mapped[SenderType] = mapped_column(Enum(SenderType), nullable=False, default=SenderType.USER)
     message: Mapped[str] = mapped_column(Text, nullable=True)
@@ -80,7 +81,7 @@ class ChatMessage(Base):
 class ChatAttachment(Base):
     __tablename__ = "chat_attachment"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_message.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1024), nullable=False)  # или хранить URL
     content_type: Mapped[str] = mapped_column(String(128), nullable=True)
@@ -91,7 +92,7 @@ class ChatAttachment(Base):
 class MessageReadReceipt(Base):
     __tablename__ = "message_read_receipt"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_message.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
     read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     message = relationship("ChatMessage", back_populates="read_receipts")
@@ -100,7 +101,7 @@ class MessageReadReceipt(Base):
 class ChatParticipant(Base):
     __tablename__ = "chat_participant"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False)  # например: "client", "support", "lawyer"
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
@@ -112,10 +113,10 @@ class ChatParticipant(Base):
 class SupportHistoryChat(Base):
     __tablename__ = "support_history_chat"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat.id"), nullable=False)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id"), nullable=False)
     old_support_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
-    reason_id: Mapped[int] = mapped_column(Integer, ForeignKey("reason_close_chat.id"), nullable=True)
-    history_date_id: Mapped[int] = mapped_column(Integer, ForeignKey("support_history_date.id"), nullable=True)
+    reason_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.reason_close_chat.id"), nullable=True)
+    history_date_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.support_history_date.id"), nullable=True)
     # можно добавить дополнительные поля: note, transferred_to, etc.
 
 
@@ -132,7 +133,7 @@ class ClientLawyerAssignment(Base):
 class ChatRating(Base):
     __tablename__ = "chat_rating"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False, unique=True)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False, unique=True)
     rating: Mapped[int] = mapped_column(Integer, nullable=False)  # например 1-5
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)

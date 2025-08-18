@@ -50,7 +50,7 @@ class UserBalance(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
     # связь к юзеру (если нужна)
-    # user = relationship("User", back_populates="balance")  # при наличии модели User
+    user = relationship("User", back_populates="balance")  # при наличии модели User
 
 
 # === Журнал операций (ledger) ===
@@ -60,7 +60,7 @@ class BalanceOperation(Base):
     __tablename__ = "balance_operation"
     id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="CASCADE"), nullable=False)
-    operation_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("operation_type.id"), nullable=False)
+    operation_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.operation_type.id"), nullable=False)
     direction: Mapped[TransactionDirection] = mapped_column(Enum(TransactionDirection), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2),
                                             nullable=False)  # положительное число; sign определяется direction
@@ -80,8 +80,8 @@ class BalanceOperation(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # JSON — полезно хранить необязательные данные от платежного шлюза (raw payload).
 
-    # operation_type = relationship("OperationType")
-    # user = relationship("User", back_populates="balance_operations")
+    operation_type = relationship("OperationType")
+    user = relationship("User", back_populates="balance_operations")
 
 
 # Индексы

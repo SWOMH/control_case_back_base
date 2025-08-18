@@ -56,6 +56,7 @@ class Token(Base):
     refresh_token: Mapped[str | None] = mapped_column(nullable=True)
     user = relationship("Users", back_populates="tokens")
 
+
 user_group_association = Table(
     'user_group_association',
     Base.metadata,
