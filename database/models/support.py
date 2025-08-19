@@ -23,7 +23,18 @@ class MessageStatus(str, enum.Enum):
 
 
 class ReasonCloseChat(Base):
-    """Причина по которой оператор закрыл чат"""
+    """
+    Причина по которой оператор закрыл чат
+
+    Нужно фиксировать, почему чат завершили: «Проблема решена», «Клиент не ответил», «Передан другому юристу».
+
+    Используется для аналитики и отчётов.
+
+    Как будет использоваться:
+
+        При закрытии чата оператор выбирает причину из списка.
+        В support_history_chat сохраняется ссылка на причину.
+    """
     __tablename__ = "reason_close_chat"
     __table_args__ = {'schema': 'public'}
     id: Mapped[intpk]
@@ -31,7 +42,18 @@ class ReasonCloseChat(Base):
 
 
 class SupportHistoryDate(Base):
-    """Даты захода в чат оператора и выхода из чата"""
+    """
+    Даты захода в чат оператора и выхода из чата
+
+    Чтобы видеть рабочую нагрузку и активность операторов.
+
+    Можно анализировать, сколько времени оператор был в чате.
+
+    Как будет использоваться:
+
+        Запись создаётся при входе оператора и обновляется при выходе.
+        Ссылается из support_history_chat.
+    """
     __tablename__ = "support_history_date"
     __table_args__ = {'schema': 'public'}
     id: Mapped[intpk]
@@ -40,6 +62,14 @@ class SupportHistoryDate(Base):
 
 
 class Chat(Base):
+    """
+    Это «контейнер» для сообщений, участников, рейтинга.
+
+    Как будет использоваться:
+
+        Создаётся при первом сообщении пользователя.
+        Через relationship можно быстро получить все сообщения, участников и рейтинг.
+    """
     __tablename__ = "chat"
     __table_args__ = {'schema': 'public',
                       'extend_existing': True}
@@ -59,6 +89,17 @@ class Chat(Base):
 
 
 class ChatMessage(Base):
+    """
+    Хранит историю переписки.
+
+    Поддерживает вложения и отметки о прочтении.
+
+    Как будет использоваться:
+
+        Добавляется каждое сообщение пользователя или оператора.
+        При редактировании обновляется edited_at и status.
+        Можно быстро сортировать по времени (есть индекс).
+    """
     __tablename__ = "chat_messages"
     id: Mapped[intpk]
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False)
@@ -79,6 +120,14 @@ class ChatMessage(Base):
 
 
 class ChatAttachment(Base):
+    """
+    Чтобы не хранить файл прямо в БД, а только ссылку.
+
+    Как будет использоваться:
+
+        Загружается вместе с сообщением.
+        Через relationship легко получить вложения для сообщения.
+    """
     __tablename__ = "chat_attachment"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False)
@@ -90,6 +139,14 @@ class ChatAttachment(Base):
 
 
 class MessageReadReceipt(Base):
+    """
+    Чтобы показывать пользователю статус «прочитано».
+    Чтобы аналитика видела, читают ли операторы сообщения вовремя.
+
+    Как будет использоваться:
+
+        Создаётся при открытии чата пользователем или оператором.
+    """
     __tablename__ = "message_read_receipt"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False)
@@ -99,6 +156,14 @@ class MessageReadReceipt(Base):
 
 
 class ChatParticipant(Base):
+    """
+    Важна история участников, если чат переводится от одного юриста к другому.
+
+    Как будет использоваться:
+
+        Запись добавляется при входе пользователя или юриста в чат.
+        Можно фильтровать чаты по роли участников.
+    """
     __tablename__ = "chat_participant"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False)
@@ -111,6 +176,13 @@ class ChatParticipant(Base):
 
 
 class SupportHistoryChat(Base):
+    """
+    Чтобы видеть, кто раньше вел чат, и почему его сменили.
+
+    Как будет использоваться:
+
+        Создаётся при передаче чата другому юристу или закрытии.
+    """
     __tablename__ = "support_history_chat"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id"), nullable=False)
@@ -121,6 +193,14 @@ class SupportHistoryChat(Base):
 
 
 class ClientLawyerAssignment(Base):
+    """
+    Для закрепления клиента за конкретным юристом.
+
+    Как будет использоваться:
+
+        При создании чата можно выбрать закреплённого юриста.
+        Можно строить аналитику: сколько клиентов у юриста.
+    """
     __tablename__ = "client_lawyer_assignment"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     client_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
@@ -131,6 +211,14 @@ class ClientLawyerAssignment(Base):
 
 
 class ChatRating(Base):
+    """
+    Чтобы собирать обратную связь о работе оператора/юриста.
+
+    Как будет использоваться:
+
+        Создаётся после завершения чата, один раз на чат.
+        Через relationship можно сразу получить рейтинг из чата.
+    """
     __tablename__ = "chat_rating"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False, unique=True)
