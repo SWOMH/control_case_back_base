@@ -22,10 +22,10 @@ class Users(Base):
     patronymic: Mapped[str]  # отчество
     is_client: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # флаг клиента
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    is_staff: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # доступ к админке
-    is_support: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # is_staff: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # доступ к админке
+    # is_support: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_banned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    is_lawyer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # is_lawyer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     last_activity: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
