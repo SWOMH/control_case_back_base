@@ -13,7 +13,7 @@ class UserRegister(BaseModel):
     Схема для регистрации.
     При регистрации достаточно: ФИО, логин, пароль, locale, timezone.
     """
-    login: constr(min_length=3, max_length=150)
+    login: constr(min_length=6, max_length=254)
     password: constr(min_length=8, max_length=128)
     first_name: Optional[constr(max_length=150)] = None
     surname: Optional[constr(max_length=150)] = None

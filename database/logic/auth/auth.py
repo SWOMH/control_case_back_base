@@ -1,0 +1,376 @@
+from database.main_connection import DataBaseMainConnect
+from database.decorator import connection
+from sqlalchemy.ext.asyncio import AsyncSession
+from exceptions.database_exc.auth import UserNotFoundExists, UserMailNotCorrectException, \
+    UserBannedException, UserNotPermissionsException, UserTokenNotFoundException, UserAlreadyExistsException, \
+    UserInvalidEmailOrPasswordException, UserPasswordNotCorrectException
+
+
+class AuthUsers(DataBaseMainConnect):
+
+    @connection
+    async def register_user(self, user_data: UserRegisterRequest, session: AsyncSession):
+        """
+        Регистрация пользователя
+
+        - **email**: Email пользователя (используется как логин)
+        - **password**: Пароль пользователя (минимум 6 символов)
+        - **full_name**: Полное имя пользователя
+        - **phone**: Телефон пользователя (необязательно)
+        - **restaurant_id**: ID ресторана
+        - **position_id**: ID позиции (необязательно)
+        - **salary_type**: Тип зарплаты при трудоустройстве
+        - **office_bool**: Офисный сотрудник ЦО?
+        - **official_provision_of_only_the_minimum_wage**: Официальное начисление только минимальной зарплаты?
+        - **office_id**: ID офиса
+        - **position_id**: ID позиции
+        - **c_position_id**: ID центральной позиции
+        - **plug**: Сотрудник на подмену/заглушка?
+        - **trainee**: Стажер?
+        - **trainee_start_date**: Дата начала стажировки
+        - **trainee_end_date**: Дата окончания стажировки
+        - **trainee_salary**: Стоимость одной смены обучения
+        - **trainee_shift_hours**: Количество часов в полной смене
+        - **trainee_salary_disbursement**: Выплатить после стажировки или в зарплату?
+        - **trainee_user_master_id**: ID наставника
+        - **groups**: Группы пользователя
+        """
+        stmt = select(Users).where(Users.email == user_data.email)
+        result = await session.execute(stmt)
+        existing_user = result.scalar_one_or_none()
+
+        if existing_user:
+            raise UserNotFoundExists
+
+        # Хешируем пароль
+        hashed_password = get_password_hash(user_data.password)
+
+        new_user = Users(
+            email=user_data.email,
+            password=hashed_password,
+            full_name=user_data.full_name,
+            phone=user_data.phone,
+            restaurant_id=user_data.restaurant_id,
+            position_id=user_data.position_id,
+            salary_type=user_data.salary_type,
+            office_bool=user_data.office_bool,
+            official_provision_of_only_the_minimum_wage=user_data.official_provision_of_only_the_minimum_wage,
+            office_id=user_data.office_id,
+            c_position_id=user_data.c_position_id,
+            plug=user_data.plug,
+            trainee=user_data.trainee,
+            type_of_contract=user_data.type_of_contract
+        )
+
+        session.add(new_user)
+        await session.flush()  # Получаем ID пользователя
+
+        # Добавляем группы
+        if user_data.groups:
+            stmt = select(Group).where(Group.id.in_(user_data.groups))
+            result = await session.execute(stmt)
+            groups = result.scalars().all()
+            new_user.groups = groups
+
+        # Создаем запись стажера если нужно
+        if user_data.trainee:
+            trainee = Trainee(
+                user_id=new_user.id,
+                trainee_start_date=user_data.trainee_start_date,
+                trainee_end_date=user_data.trainee_end_date,
+                trainee_salary=user_data.trainee_salary,
+                trainee_shift_hours=user_data.trainee_shift_hours,
+                trainee_salary_disbursement=user_data.trainee_salary_disbursement,
+                trainee_user_master_id=user_data.trainee_user_master_id
+            )
+            session.add(trainee)
+        await session.commit()
+        await session.refresh(new_user)
+        return new_user
+
+    @connection
+    async def authenticate_user(self, email: str, password: str, session: AsyncSession) -> Optional[Users]:
+        """Аутентифицирует пользователя"""
+        stmt = select(Users).where(Users.email == email)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise UserNotFoundExists
+
+        if not verify_password(password, user.password):
+            raise UserInvalidEmailOrPasswordException
+
+        return user
+
+    @connection
+    async def save_token(self, user_id: int, access_token: str, refresh_token: str, session: AsyncSession):
+        """Сохраняет токены в базе данных"""
+        # Удаляем старые токены пользователя
+        await session.execute(
+            select(Token).where(Token.user_id == user_id)
+        )
+        old_tokens = await session.execute(select(Token).where(Token.user_id == user_id))
+        for token in old_tokens.scalars():
+            await session.delete(token)
+
+        # Создаем новый токен
+        new_token = Token(
+            user_id=user_id,
+            token=access_token,
+            refresh_token=refresh_token
+        )
+        session.add(new_token)
+        await session.commit()
+
+    @connection
+    async def user_verification_by_token(self, token_user_id: int, refresh_token: str, session: AsyncSession) -> Users:
+        """
+        Верификация пользователя по токену
+        """
+        # Проверяем, что токен существует в базе данных
+        stmt_token = select(Token).where(
+            Token.user_id == token_user_id,
+            Token.refresh_token == refresh_token
+        )
+        result = await session.execute(stmt_token)
+        db_token = result.scalar_one_or_none()
+        if not db_token:
+            raise UserTokenNotFoundException
+
+        # Получаем пользователя
+        stmt = select(Users).options(selectinload(Users.restaurant), selectinload(Users.office)).where(
+            Users.id == token_user_id)
+        result = await session.execute(stmt)
+        user: Users = result.scalar_one_or_none()
+
+        if not user:
+            raise UserNotFoundExists
+
+        if user.is_banned:
+            raise UserBannedException
+
+        return user
+
+    @connection
+    async def user_get_by_token(self, token_user_id: int, session: AsyncSession) -> Users:
+        """
+        Поиск пользователя по токену
+        """
+        # Получаем пользователя
+        stmt = select(Users).options(selectinload(Users.restaurant), selectinload(Users.office),
+                                     selectinload(Users.position), selectinload(Users.groups)).where(
+            Users.id == token_user_id)
+        result = await session.execute(stmt)
+        user: Users = result.scalar_one_or_none()
+
+        if not user:
+            raise UserNotFoundExists
+
+        if user.is_banned:
+            raise UserBannedException
+
+        return user
+
+    @connection
+    async def logout_user(self, user_id: int, session: AsyncSession):
+        # Удаляем все токены пользователя
+        stmt = select(Token).where(Token.user_id == user_id)
+        result = await session.execute(stmt)
+        tokens = result.scalars().all()
+
+        for token in tokens:
+            await session.delete(token)
+
+        await session.commit()
+
+    @connection
+    async def get_users_list(self, filters: UserListFilters, current_user: Users, session: AsyncSession) -> Tuple[
+        list[Users], int]:
+        """
+        Получение списка пользователей с фильтрацией и пагинацией
+        """
+        # Базовый запрос с загрузкой связанных данных
+        stmt = select(Users).options(
+            selectinload(Users.restaurant),
+            selectinload(Users.office),
+            selectinload(Users.position),
+            selectinload(Users.groups)
+        )
+
+        # Фильтры доступа: менеджер видит только своих сотрудников
+        if not current_user.is_admin:
+            if current_user.restaurant_id:
+                stmt = stmt.where(Users.restaurant_id == current_user.restaurant_id)
+            else:
+                # Если у менеджера нет ресторана, он не видит никого
+                stmt = stmt.where(Users.id == -1)  # Невозможное условие
+
+        # Применяем фильтры
+        if filters.search:
+            search_filter = or_(
+                Users.full_name.ilike(f"%{filters.search}%"),
+                Users.email.ilike(f"%{filters.search}%"),
+                Users.phone.ilike(f"%{filters.search}%"),
+                Users.tab_number.ilike(f"%{filters.search}%")
+            )
+            stmt = stmt.where(search_filter)
+
+        if filters.restaurant_id is not None:
+            stmt = stmt.where(Users.restaurant_id == filters.restaurant_id)
+
+        if filters.position_id is not None:
+            stmt = stmt.where(Users.position_id == filters.position_id)
+
+        if filters.is_active is not None:
+            stmt = stmt.where(Users.is_active == filters.is_active)
+
+        if filters.is_admin is not None:
+            stmt = stmt.where(Users.is_admin == filters.is_admin)
+
+        if filters.trainee is not None:
+            stmt = stmt.where(Users.trainee == filters.trainee)
+
+        if filters.office_bool is not None:
+            stmt = stmt.where(Users.office_bool == filters.office_bool)
+
+        # Подсчет общего количества
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_result = await session.execute(count_stmt)
+        total_count = count_result.scalar()
+
+        # Применяем пагинацию и сортировку
+        stmt = stmt.order_by(Users.full_name).offset(filters.offset).limit(filters.limit)
+
+        # Выполняем запрос
+        result = await session.execute(stmt)
+        users = result.scalars().all()
+
+        return users, total_count
+
+    @connection
+    async def get_user_by_id(self, user_id: int, current_user: Users, session: AsyncSession) -> Users:
+        """
+        Получение пользователя по ID с проверкой доступа
+        """
+        stmt = select(Users).options(
+            selectinload(Users.restaurant),
+            selectinload(Users.office),
+            selectinload(Users.position),
+            selectinload(Users.groups)
+        ).where(Users.id == user_id)
+
+        # Фильтры доступа: менеджер видит только своих сотрудников
+        if not current_user.is_admin:
+            if current_user.restaurant_id:
+                stmt = stmt.where(Users.restaurant_id == current_user.restaurant_id)
+            else:
+                raise UserNotFoundExists
+
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise UserNotFoundExists
+
+        return user
+
+    @connection
+    async def update_user(self, user_id: int, user_data: UserUpdateRequest, current_user: Users,
+                          session: AsyncSession) -> Users:
+        """
+        Обновление пользователя
+        """
+        # Получаем пользователя с проверкой доступа
+        user = await self.get_user_by_id(user_id, current_user, session)
+
+        # Проверяем email на уникальность (если он изменяется)
+        if user_data.email and user_data.email != user.email:
+            stmt = select(Users).where(Users.email == user_data.email, Users.id != user_id)
+            result = await session.execute(stmt)
+            existing_user = result.scalar_one_or_none()
+            if existing_user:
+                raise UserMailNotCorrectException
+
+        # Обновляем поля
+        update_data = user_data.model_dump(exclude_unset=True)
+
+        # Хешируем пароль если он изменяется
+        if 'password' in update_data:
+            update_data['password'] = get_password_hash(update_data['password'])
+
+        # Обрабатываем группы отдельно
+        groups_data = update_data.pop('groups', None)
+
+        # Обновляем основные поля
+        for field, value in update_data.items():
+            setattr(user, field, value)
+
+        # Обновляем группы
+        if groups_data is not None:
+            stmt = select(Group).where(Group.id.in_(groups_data))
+            result = await session.execute(stmt)
+            groups = result.scalars().all()
+            user.groups = groups
+
+        # Обновляем стажировку
+        if user_data.trainee is not None:
+            if user_data.trainee:
+                # Проверяем существует ли запись стажера
+                stmt = select(Trainee).where(Trainee.user_id == user_id)
+                result = await session.execute(stmt)
+                trainee = result.scalar_one_or_none()
+
+                if not trainee:
+                    trainee = Trainee(user_id=user_id)
+                    session.add(trainee)
+
+                # Обновляем данные стажера
+                if user_data.trainee_start_date is not None:
+                    trainee.trainee_start_date = user_data.trainee_start_date
+                if user_data.trainee_end_date is not None:
+                    trainee.trainee_end_date = user_data.trainee_end_date
+                if user_data.trainee_salary is not None:
+                    trainee.trainee_salary = user_data.trainee_salary
+                if user_data.trainee_shift_hours is not None:
+                    trainee.trainee_shift_hours = user_data.trainee_shift_hours
+                if user_data.trainee_salary_disbursement is not None:
+                    trainee.trainee_salary_disbursement = user_data.trainee_salary_disbursement
+                if user_data.trainee_user_master_id is not None:
+                    trainee.trainee_user_master_id = user_data.trainee_user_master_id
+            else:
+                # Удаляем запись стажера
+                stmt = select(Trainee).where(Trainee.user_id == user_id)
+                result = await session.execute(stmt)
+                trainee = result.scalar_one_or_none()
+                if trainee:
+                    await session.delete(trainee)
+
+        await session.commit()
+        await session.refresh(user)
+        return user
+
+    @connection
+    async def delete_user(self, user_id: int, current_user: Users, session: AsyncSession) -> bool:
+        """
+        Мягкое удаление пользователя (деактивация)
+        """
+        # Получаем пользователя с проверкой доступа
+        user = await self.get_user_by_id(user_id, current_user, session)
+
+        # Деактивируем пользователя
+        user.is_active = False
+
+        # Удаляем все токены пользователя
+        stmt = select(Token).where(Token.user_id == user_id)
+        result = await session.execute(stmt)
+        tokens = result.scalars().all()
+
+        for token in tokens:
+            await session.delete(token)
+
+        await session.commit()
+        return True
+
+
+db_auth = DatabaseAuth()
