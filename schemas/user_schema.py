@@ -35,8 +35,12 @@ class UserLoginRequest(BaseModel):
     password: str = Field(..., description="Пароль пользователя")
 
 
-# По желанию: схема ответа при успешной регистрации (не содержит пароль)
-class UserRegisterResponse(BaseModel):
+class RefreshTokenRequest(BaseModel):
+    """Схема для обновления токена"""
+    refresh_token: str = Field(..., description="Refresh токен")
+
+
+class TokenResponse(BaseModel):
     access_token: str = Field(..., description="Access токен")
     refresh_token: str = Field(..., description="Refresh токен")
     token_type: str = Field(default="bearer", description="Тип токена")
@@ -62,7 +66,7 @@ class TokenData(BaseModel):
 # ---------------------------
 # Полная схема ответа с информацией о пользователе
 # ---------------------------
-class UserOut(BaseModel):
+class UserResponse(BaseModel):
     id: int
     login: str
     email: Optional[EmailStr] = None

@@ -2,21 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 
 from database.models.users import Users, Token
-from database.logic.general.auth_db import db_auth
-from exceptions.user_exceptions import UserNotFoundExists, UserBannedException, UserInvalidEmailOrPasswordException, \
+from database.logic.auth.auth import db_auth
+from exceptions.database_exc.auth import UserNotFoundExists, UserBannedException, UserInvalidEmailOrPasswordException, \
     UserMailNotCorrectException, UserTokenNotFoundException
-from types_schemas.auth_schemas import (
-    UserRegisterRequest,
+from schemas.user_schema import (
+    UserRegister,
     UserLoginRequest,
     TokenResponse,
-    RefreshTokenRequest,
-    UserRegisterResponse,
-    UserResponse,
-    UserUpdateRequest,
-    UserListFilters,
-    UserListResponse
+    UserUpdateRequest, UserResponse, RefreshTokenRequest
 )
-from logic.auth_utils import (
+from utils.auth import (
     create_access_token,
     create_refresh_token,
     verify_token,
@@ -28,10 +23,10 @@ router = APIRouter(prefix="/auth", tags=["Авторизация"])
 security = HTTPBearer()
 
 
-@router.post("/register", response_model=UserRegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
-        user_data: UserRegisterRequest
-) -> UserRegisterResponse:
+        user_data: UserRegister
+) -> UserResponse:
     """
     Регистрация нового пользователя
     """
@@ -43,7 +38,7 @@ async def register_user(
             detail=e.details
         )
 
-    return UserRegisterResponse.model_validate(new_user)
+    return UserResponse.model_validate(new_user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -170,54 +165,54 @@ async def get_current_user_info(
 
 
 # Эндпоинты управления пользователями
-@router.get("/users", response_model=UserListResponse)
-async def get_users_list(
-        # Фильтры закомментированы - фильтрация теперь на фронтенде
-        # search: str = None,
-        # restaurant_id: int = None,
-        # position_id: int = None,
-        # is_active: bool = None,
-        # is_admin: bool = None,
-        # trainee: bool = None,
-        # office_bool: bool = None,
-        limit: int = 1000,  # Большой лимит для загрузки всех данных
-        offset: int = 0,
-        current_user: Users = Depends(get_current_active_user)
-) -> UserListResponse:
-    """
-    Получение списка пользователей
-
-    Администраторы видят всех пользователей,
-    менеджеры видят только сотрудников своего ресторана
-
-    Фильтрация выполняется на фронтенде для лучшей производительности
-    """
-    filters = UserListFilters(
-        # search=search,
-        # restaurant_id=restaurant_id,
-        # position_id=position_id,
-        # is_active=is_active,
-        # is_admin=is_admin,
-        # trainee=trainee,
-        # office_bool=office_bool,
-        limit=limit,
-        offset=offset
-    )
-
-    try:
-        users, total_count = await db_auth.get_users_list(filters, current_user)
-
-        return UserListResponse(
-            users=[UserResponse.model_validate(user) for user in users],
-            total_count=total_count,
-            offset=offset,
-            limit=limit
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка получения списка пользователей: {str(e)}"
-        )
+# @router.get("/users", response_model=UserListResponse)
+# async def get_users_list(
+#         # Фильтры закомментированы - фильтрация теперь на фронтенде
+#         # search: str = None,
+#         # restaurant_id: int = None,
+#         # position_id: int = None,
+#         # is_active: bool = None,
+#         # is_admin: bool = None,
+#         # trainee: bool = None,
+#         # office_bool: bool = None,
+#         limit: int = 1000,  # Большой лимит для загрузки всех данных
+#         offset: int = 0,
+#         current_user: Users = Depends(get_current_active_user)
+# ) -> UserListResponse:
+#     """
+#     Получение списка пользователей
+#
+#     Администраторы видят всех пользователей,
+#     менеджеры видят только сотрудников своего ресторана
+#
+#     Фильтрация выполняется на фронтенде для лучшей производительности
+#     """
+#     filters = UserListFilters(
+#         # search=search,
+#         # restaurant_id=restaurant_id,
+#         # position_id=position_id,
+#         # is_active=is_active,
+#         # is_admin=is_admin,
+#         # trainee=trainee,
+#         # office_bool=office_bool,
+#         limit=limit,
+#         offset=offset
+#     )
+#
+#     try:
+#         users, total_count = await db_auth.get_users_list(filters, current_user)
+#
+#         return UserListResponse(
+#             users=[UserResponse.model_validate(user) for user in users],
+#             total_count=total_count,
+#             offset=offset,
+#             limit=limit
+#         )
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Ошибка получения списка пользователей: {str(e)}"
+#         )
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)

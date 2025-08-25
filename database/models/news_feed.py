@@ -21,11 +21,14 @@ class Post(Base):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # основное тело поста
+
+    # TODO: Изображение в отдельную таблицу надо, их может быть несколько
     image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     video_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
 
     moderated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     published: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    time_published: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     author_id: Mapped[u_id] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="SET NULL"), nullable=True)
