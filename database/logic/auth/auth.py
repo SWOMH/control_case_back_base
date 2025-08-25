@@ -10,7 +10,7 @@ from utils.auth import get_password_hash, verify_password
 from database.models.users import Users, Group, Token
 from exceptions.database_exc.auth import UserNotFoundExists, UserMailNotCorrectException, \
     UserBannedException, UserNotPermissionsException, UserTokenNotFoundException, UserAlreadyExistsException, \
-    UserInvalidEmailOrPasswordException, UserPasswordNotCorrectException
+    UserInvalidEmailOrPasswordException, UserPasswordNotCorrectException, UserNotConfirmed
 from schemas.user_schema import UserRegister, UserUpdateRequest
 
 
@@ -31,8 +31,11 @@ class AuthUsers(DataBaseMainConnect):
         result = await session.execute(stmt)
         existing_user = result.scalar_one_or_none()
 
-        if existing_user:
-            raise UserNotFoundExists
+        if existing_user.account_confirmed:
+            raise UserAlreadyExistsException
+        if not existing_user.account_confirmed:
+            raise UserNotConfirmed
+
 
         # Хешируем пароль
         hashed_password = get_password_hash(user_data.password)

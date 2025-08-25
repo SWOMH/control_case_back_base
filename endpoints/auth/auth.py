@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer
 from database.models.users import Users, Token
 from database.logic.auth.auth import db_auth
 from exceptions.database_exc.auth import UserNotFoundExists, UserBannedException, UserInvalidEmailOrPasswordException, \
-    UserMailNotCorrectException, UserTokenNotFoundException
+    UserMailNotCorrectException, UserTokenNotFoundException, UserNotConfirmed
 from schemas.user_schema import (
     UserRegister,
     UserLoginRequest,
@@ -37,8 +37,18 @@ async def register_user(
             status_code=404,
             detail=e.details
         )
+    except UserNotConfirmed as e:
+        raise HTTPException(
+            status_code=406,
+            detail=e.details
+        )
 
     return UserResponse.model_validate(new_user)
+
+@router.post('/confirmed_message_email', status_code=status.HTTP_200_OK)
+async def send_message_confirmed(user_id: int):
+    ...
+
 
 
 @router.post("/login", response_model=TokenResponse)

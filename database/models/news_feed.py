@@ -7,6 +7,7 @@ from sqlalchemy import Date, DateTime, ForeignKey, Numeric, Text, text, func, St
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.types import intpk, u_id
 
+# TODO: Нужно будет заготовить файлы под S3
 class Post(Base):
     __tablename__ = "posts"
     __table_args__ = {'schema': 'public'}

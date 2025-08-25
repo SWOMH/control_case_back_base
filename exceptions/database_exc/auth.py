@@ -6,6 +6,8 @@ class UserNotFoundExists(Exception):
 class UserAlreadyExistsException(Exception):
     details = "User already exists"
 
+class UserNotConfirmed(Exception):
+    details = "User not confirmed"
 
 class UserPasswordNotCorrectException(Exception):
     details = "Password not correct"
