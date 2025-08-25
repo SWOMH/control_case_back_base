@@ -35,6 +35,7 @@ class Users(Base):
     timezone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     preferences: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
+    balance = relationship("UserBalance", back_populates='user')
     # history_balance = relationship("HistoryBalance", back_populates='user')
     activity = relationship("Activity", back_populates="user")
     groups = relationship("Group", secondary="user_group_association", back_populates="users")

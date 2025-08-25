@@ -1,41 +1,33 @@
+from typing import Optional
+
+from sqlalchemy.orm import selectinload
+
 from database.main_connection import DataBaseMainConnect
 from database.decorator import connection
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from utils.auth import get_password_hash, verify_password
+from database.models.users import Users, Group, Token
 from exceptions.database_exc.auth import UserNotFoundExists, UserMailNotCorrectException, \
     UserBannedException, UserNotPermissionsException, UserTokenNotFoundException, UserAlreadyExistsException, \
     UserInvalidEmailOrPasswordException, UserPasswordNotCorrectException
+from schemas.user_schema import UserRegister, UserUpdateRequest
 
 
 class AuthUsers(DataBaseMainConnect):
 
     @connection
-    async def register_user(self, user_data: UserRegisterRequest, session: AsyncSession):
+    async def register_user(self, user_data: UserRegister, session: AsyncSession):
         """
         Регистрация пользователя
 
         - **email**: Email пользователя (используется как логин)
         - **password**: Пароль пользователя (минимум 6 символов)
-        - **full_name**: Полное имя пользователя
-        - **phone**: Телефон пользователя (необязательно)
-        - **restaurant_id**: ID ресторана
-        - **position_id**: ID позиции (необязательно)
-        - **salary_type**: Тип зарплаты при трудоустройстве
-        - **office_bool**: Офисный сотрудник ЦО?
-        - **official_provision_of_only_the_minimum_wage**: Официальное начисление только минимальной зарплаты?
-        - **office_id**: ID офиса
-        - **position_id**: ID позиции
-        - **c_position_id**: ID центральной позиции
-        - **plug**: Сотрудник на подмену/заглушка?
-        - **trainee**: Стажер?
-        - **trainee_start_date**: Дата начала стажировки
-        - **trainee_end_date**: Дата окончания стажировки
-        - **trainee_salary**: Стоимость одной смены обучения
-        - **trainee_shift_hours**: Количество часов в полной смене
-        - **trainee_salary_disbursement**: Выплатить после стажировки или в зарплату?
-        - **trainee_user_master_id**: ID наставника
-        - **groups**: Группы пользователя
+        - **first_name**: Имя пользователя
+        - **surname**: Фамилия
+        - **patronymic**: Отчество
         """
-        stmt = select(Users).where(Users.email == user_data.email)
+        stmt = select(Users).where(Users.email == user_data.login)
         result = await session.execute(stmt)
         existing_user = result.scalar_one_or_none()
 
@@ -46,44 +38,16 @@ class AuthUsers(DataBaseMainConnect):
         hashed_password = get_password_hash(user_data.password)
 
         new_user = Users(
-            email=user_data.email,
+            login=user_data.login,
             password=hashed_password,
-            full_name=user_data.full_name,
-            phone=user_data.phone,
-            restaurant_id=user_data.restaurant_id,
-            position_id=user_data.position_id,
-            salary_type=user_data.salary_type,
-            office_bool=user_data.office_bool,
-            official_provision_of_only_the_minimum_wage=user_data.official_provision_of_only_the_minimum_wage,
-            office_id=user_data.office_id,
-            c_position_id=user_data.c_position_id,
-            plug=user_data.plug,
-            trainee=user_data.trainee,
-            type_of_contract=user_data.type_of_contract
+            first_name=user_data.first_name,
+            surname=user_data.surname,
+            patronymic=user_data.patronymic,
+            locale=user_data.locale,
+            timezone=user_data.timezone
         )
 
         session.add(new_user)
-        await session.flush()  # Получаем ID пользователя
-
-        # Добавляем группы
-        if user_data.groups:
-            stmt = select(Group).where(Group.id.in_(user_data.groups))
-            result = await session.execute(stmt)
-            groups = result.scalars().all()
-            new_user.groups = groups
-
-        # Создаем запись стажера если нужно
-        if user_data.trainee:
-            trainee = Trainee(
-                user_id=new_user.id,
-                trainee_start_date=user_data.trainee_start_date,
-                trainee_end_date=user_data.trainee_end_date,
-                trainee_salary=user_data.trainee_salary,
-                trainee_shift_hours=user_data.trainee_shift_hours,
-                trainee_salary_disbursement=user_data.trainee_salary_disbursement,
-                trainee_user_master_id=user_data.trainee_user_master_id
-            )
-            session.add(trainee)
         await session.commit()
         await session.refresh(new_user)
         return new_user
@@ -139,7 +103,7 @@ class AuthUsers(DataBaseMainConnect):
             raise UserTokenNotFoundException
 
         # Получаем пользователя
-        stmt = select(Users).options(selectinload(Users.restaurant), selectinload(Users.office)).where(
+        stmt = select(Users).options(selectinload(Users.balance)).where(
             Users.id == token_user_id)
         result = await session.execute(stmt)
         user: Users = result.scalar_one_or_none()
@@ -158,8 +122,7 @@ class AuthUsers(DataBaseMainConnect):
         Поиск пользователя по токену
         """
         # Получаем пользователя
-        stmt = select(Users).options(selectinload(Users.restaurant), selectinload(Users.office),
-                                     selectinload(Users.position), selectinload(Users.groups)).where(
+        stmt = select(Users).options(selectinload(Users.balance), selectinload(Users.groups)).where(
             Users.id == token_user_id)
         result = await session.execute(stmt)
         user: Users = result.scalar_one_or_none()
@@ -184,69 +147,69 @@ class AuthUsers(DataBaseMainConnect):
 
         await session.commit()
 
-    @connection
-    async def get_users_list(self, filters: UserListFilters, current_user: Users, session: AsyncSession) -> Tuple[
-        list[Users], int]:
-        """
-        Получение списка пользователей с фильтрацией и пагинацией
-        """
-        # Базовый запрос с загрузкой связанных данных
-        stmt = select(Users).options(
-            selectinload(Users.restaurant),
-            selectinload(Users.office),
-            selectinload(Users.position),
-            selectinload(Users.groups)
-        )
-
-        # Фильтры доступа: менеджер видит только своих сотрудников
-        if not current_user.is_admin:
-            if current_user.restaurant_id:
-                stmt = stmt.where(Users.restaurant_id == current_user.restaurant_id)
-            else:
-                # Если у менеджера нет ресторана, он не видит никого
-                stmt = stmt.where(Users.id == -1)  # Невозможное условие
-
-        # Применяем фильтры
-        if filters.search:
-            search_filter = or_(
-                Users.full_name.ilike(f"%{filters.search}%"),
-                Users.email.ilike(f"%{filters.search}%"),
-                Users.phone.ilike(f"%{filters.search}%"),
-                Users.tab_number.ilike(f"%{filters.search}%")
-            )
-            stmt = stmt.where(search_filter)
-
-        if filters.restaurant_id is not None:
-            stmt = stmt.where(Users.restaurant_id == filters.restaurant_id)
-
-        if filters.position_id is not None:
-            stmt = stmt.where(Users.position_id == filters.position_id)
-
-        if filters.is_active is not None:
-            stmt = stmt.where(Users.is_active == filters.is_active)
-
-        if filters.is_admin is not None:
-            stmt = stmt.where(Users.is_admin == filters.is_admin)
-
-        if filters.trainee is not None:
-            stmt = stmt.where(Users.trainee == filters.trainee)
-
-        if filters.office_bool is not None:
-            stmt = stmt.where(Users.office_bool == filters.office_bool)
-
-        # Подсчет общего количества
-        count_stmt = select(func.count()).select_from(stmt.subquery())
-        count_result = await session.execute(count_stmt)
-        total_count = count_result.scalar()
-
-        # Применяем пагинацию и сортировку
-        stmt = stmt.order_by(Users.full_name).offset(filters.offset).limit(filters.limit)
-
-        # Выполняем запрос
-        result = await session.execute(stmt)
-        users = result.scalars().all()
-
-        return users, total_count
+    # @connection
+    # async def get_users_list(self, filters: UserListFilters, current_user: Users, session: AsyncSession) -> Tuple[
+    #     list[Users], int]:
+    #     """
+    #     Получение списка пользователей с фильтрацией и пагинацией
+    #     """
+    #     # Базовый запрос с загрузкой связанных данных
+    #     stmt = select(Users).options(
+    #         selectinload(Users.restaurant),
+    #         selectinload(Users.office),
+    #         selectinload(Users.position),
+    #         selectinload(Users.groups)
+    #     )
+    #
+    #     # Фильтры доступа: менеджер видит только своих сотрудников
+    #     if not current_user.is_admin:
+    #         if current_user.restaurant_id:
+    #             stmt = stmt.where(Users.restaurant_id == current_user.restaurant_id)
+    #         else:
+    #             # Если у менеджера нет ресторана, он не видит никого
+    #             stmt = stmt.where(Users.id == -1)  # Невозможное условие
+    #
+    #     # Применяем фильтры
+    #     if filters.search:
+    #         search_filter = or_(
+    #             Users.full_name.ilike(f"%{filters.search}%"),
+    #             Users.email.ilike(f"%{filters.search}%"),
+    #             Users.phone.ilike(f"%{filters.search}%"),
+    #             Users.tab_number.ilike(f"%{filters.search}%")
+    #         )
+    #         stmt = stmt.where(search_filter)
+    #
+    #     if filters.restaurant_id is not None:
+    #         stmt = stmt.where(Users.restaurant_id == filters.restaurant_id)
+    #
+    #     if filters.position_id is not None:
+    #         stmt = stmt.where(Users.position_id == filters.position_id)
+    #
+    #     if filters.is_active is not None:
+    #         stmt = stmt.where(Users.is_active == filters.is_active)
+    #
+    #     if filters.is_admin is not None:
+    #         stmt = stmt.where(Users.is_admin == filters.is_admin)
+    #
+    #     if filters.trainee is not None:
+    #         stmt = stmt.where(Users.trainee == filters.trainee)
+    #
+    #     if filters.office_bool is not None:
+    #         stmt = stmt.where(Users.office_bool == filters.office_bool)
+    #
+    #     # Подсчет общего количества
+    #     count_stmt = select(func.count()).select_from(stmt.subquery())
+    #     count_result = await session.execute(count_stmt)
+    #     total_count = count_result.scalar()
+    #
+    #     # Применяем пагинацию и сортировку
+    #     stmt = stmt.order_by(Users.full_name).offset(filters.offset).limit(filters.limit)
+    #
+    #     # Выполняем запрос
+    #     result = await session.execute(stmt)
+    #     users = result.scalars().all()
+    #
+    #     return users, total_count
 
     @connection
     async def get_user_by_id(self, user_id: int, current_user: Users, session: AsyncSession) -> Users:
@@ -254,18 +217,16 @@ class AuthUsers(DataBaseMainConnect):
         Получение пользователя по ID с проверкой доступа
         """
         stmt = select(Users).options(
-            selectinload(Users.restaurant),
-            selectinload(Users.office),
-            selectinload(Users.position),
+            selectinload(Users.balance),
             selectinload(Users.groups)
         ).where(Users.id == user_id)
 
         # Фильтры доступа: менеджер видит только своих сотрудников
-        if not current_user.is_admin:
-            if current_user.restaurant_id:
-                stmt = stmt.where(Users.restaurant_id == current_user.restaurant_id)
-            else:
-                raise UserNotFoundExists
+        # if not current_user.is_admin:
+        #     if current_user.restaurant_id:
+        #         stmt = stmt.where(Users.restaurant_id == current_user.restaurant_id)
+        #     else:
+        #         raise UserNotFoundExists
 
         result = await session.execute(stmt)
         user = result.scalar_one_or_none()
@@ -313,38 +274,6 @@ class AuthUsers(DataBaseMainConnect):
             groups = result.scalars().all()
             user.groups = groups
 
-        # Обновляем стажировку
-        if user_data.trainee is not None:
-            if user_data.trainee:
-                # Проверяем существует ли запись стажера
-                stmt = select(Trainee).where(Trainee.user_id == user_id)
-                result = await session.execute(stmt)
-                trainee = result.scalar_one_or_none()
-
-                if not trainee:
-                    trainee = Trainee(user_id=user_id)
-                    session.add(trainee)
-
-                # Обновляем данные стажера
-                if user_data.trainee_start_date is not None:
-                    trainee.trainee_start_date = user_data.trainee_start_date
-                if user_data.trainee_end_date is not None:
-                    trainee.trainee_end_date = user_data.trainee_end_date
-                if user_data.trainee_salary is not None:
-                    trainee.trainee_salary = user_data.trainee_salary
-                if user_data.trainee_shift_hours is not None:
-                    trainee.trainee_shift_hours = user_data.trainee_shift_hours
-                if user_data.trainee_salary_disbursement is not None:
-                    trainee.trainee_salary_disbursement = user_data.trainee_salary_disbursement
-                if user_data.trainee_user_master_id is not None:
-                    trainee.trainee_user_master_id = user_data.trainee_user_master_id
-            else:
-                # Удаляем запись стажера
-                stmt = select(Trainee).where(Trainee.user_id == user_id)
-                result = await session.execute(stmt)
-                trainee = result.scalar_one_or_none()
-                if trainee:
-                    await session.delete(trainee)
 
         await session.commit()
         await session.refresh(user)
@@ -373,4 +302,4 @@ class AuthUsers(DataBaseMainConnect):
         return True
 
 
-db_auth = DatabaseAuth()
+db_auth = AuthUsers()
