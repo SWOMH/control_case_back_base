@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from typing import Optional
+
 from sqlalchemy.sql.functions import coalesce
 from database.main_connection import DataBaseMainConnect
 from database.decorator import connection
@@ -7,7 +9,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.news_feed import Post, Like, Comment
 from exceptions.database_exc.news import NewsIsEmpty
-from schemas.news_schema import NewsCreate
+from schemas.news_schema import NewsCreate, NewsUpdate
 
 
 class NewsDataBase(DataBaseMainConnect):
@@ -100,6 +102,83 @@ class NewsDataBase(DataBaseMainConnect):
         await session.flush()
         await session.refresh(post)
         return post
+
+    @connection
+    async def get_news_by_id(
+            self,
+            news_id: int,
+            session: AsyncSession
+    ) -> Optional[Post]:
+        """Получить пост по ID"""
+        result = await session.execute(
+            select(Post).where(
+                Post.id == news_id,
+                Post.deleted_at.is_(None)  # Исключаем удаленные посты
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @connection
+    async def update_news(
+            self,
+            news_id: int,
+            news_data: NewsUpdate,
+            session: AsyncSession
+    ) -> Optional[Post]:
+        """Обновить пост"""
+        # Получаем пост
+        post = await self.get_news_by_id(news_id, session)
+        if not post:
+            return None
+
+        # Подготавливаем данные для обновления
+        update_data = news_data.dict(exclude_unset=True)
+
+        # Если меняем статус published, обновляем time_published
+        if 'published' in update_data:
+            if update_data['published'] and not post.time_published:
+                update_data['time_published'] = datetime.now(timezone.utc)
+            elif not update_data['published']:
+                update_data['time_published'] = None
+
+        # Обновляем поля
+        for field, value in update_data.items():
+            setattr(post, field, value)
+
+        # Время обновления проставится автоматически благодаря onupdate
+        await session.commit()
+        await session.refresh(post)
+        return post
+
+    @connection
+    async def delete_news(
+            self,
+            news_id: int,
+            session: AsyncSession
+    ) -> bool:
+        """Мягкое удаление поста (устанавливаем deleted_at)"""
+        post = await self.get_news_by_id(news_id, session)
+        if not post:
+            return False
+
+        post.deleted_at = datetime.now(timezone.utc)
+        await session.commit()
+        return True
+
+    @connection
+    async def hard_delete_news(
+            self,
+            news_id: int,
+            session: AsyncSession
+    ) -> bool:
+        """Полное удаление поста из базы"""
+        post = await self.get_news_by_id(news_id, session)
+        if not post:
+            return False
+
+        await session.delete(post)
+        await session.commit()
+        return True
 
 
 

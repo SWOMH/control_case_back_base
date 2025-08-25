@@ -26,6 +26,33 @@ class NewsCreate(BaseModel):
     published: Optional[bool] = Field(True)
     time_published: Optional[datetime] = Field(None)
 
+# Схема для обновления поста (все поля опциональны)
+class NewsUpdate(BaseModel):
+    title: Optional[str] = Field(None, description='title')
+    content: Optional[str] = Field(None, description='Контент(описание)')
+    image_url: Optional[str] = Field(None, description='Ссылка на изображение')
+    video_url: Optional[str] = Field(None, description='Ссылка на видео')
+    published: Optional[bool] = Field(None)
+    moderated: Optional[bool] = Field(None)
+    time_published: Optional[datetime] = Field(None)
+
+# Схема ответа с полной информацией о посте
+class NewsResponseAdmin(BaseModel):
+    id: int
+    title: str
+    content: Optional[str]
+    image_url: Optional[str]
+    video_url: Optional[str]
+    moderated: bool
+    published: bool
+    time_created: datetime
+    time_updated: Optional[datetime]
+    time_published: Optional[datetime]
+    author_id: int
+
+    class Config:
+        from_attributes = True
+
 # class NewsResponse(BaseModel):
 #     id: int
 #     title: str
