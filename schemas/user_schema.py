@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict
-from datetime import datetime
+from datetime import datetime, date
 from schemas.balance_schema import UserBalanceOut
 from schemas.court_schema import CourtStageOut
 
@@ -53,6 +53,12 @@ class GroupOut(BaseModel):
         orm_mode = True
 
 
+class TokenData(BaseModel):
+    """Схема данных токена для внутреннего использования"""
+    user_id: Optional[int] = None
+    email: Optional[str] = None
+
+
 # ---------------------------
 # Полная схема ответа с информацией о пользователе
 # ---------------------------
@@ -84,7 +90,24 @@ class UserOut(BaseModel):
     # вложенные сущности
     groups: List[GroupOut] = []
     balance: Optional[UserBalanceOut] = None
-    court_stages: List[CourtStageOut] = []
+    # court_stages: List[CourtStageOut] = []
 
     class Config:
         orm_mode = True
+
+class UserUpdateRequest(BaseModel):
+    """
+    Схема для обновления пользователя
+    """
+    email: Optional[EmailStr] = Field(None, description="Email пользователя")
+    password: Optional[str] = Field(None, min_length=6, description="Новый пароль пользователя")
+    surname: Optional[str] = Field(None, min_length=2, description="Фамилия")
+    full_name: Optional[str] = Field(None, min_length=2, description="Имя пользователя")
+    patronymic: Optional[str] = Field(None, min_length=2, description="Отчество")
+    # phone: Optional[str] = Field(None, description="Телефон пользователя")
+
+    is_client: Optional[bool] = Field(None, description='Клиент или нет')
+    is_active: Optional[bool] = Field(None, description="Активен ли пользователь")
+    is_banned: Optional[bool] = Field(None, description="Заблокирован ли пользователь")
+    date_termination: Optional[date] = Field(None, description="Дата увольнения")
+    groups: Optional[list[str]] = Field(None, description="Группы пользователя")
