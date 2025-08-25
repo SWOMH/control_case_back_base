@@ -6,7 +6,8 @@ from config.constants import DEV_CONSTANT
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.news_feed import Post, Like, Comment
-
+from exceptions.database_exc.news import NewsIsEmpty
+from schemas.news_schema import NewsCreate
 
 
 class NewsDataBase(DataBaseMainConnect):
@@ -74,6 +75,31 @@ class NewsDataBase(DataBaseMainConnect):
             raise NewsIsEmpty
         return result.all()
 
+    @connection
+    async def create_news(
+            self,
+            news_data: NewsCreate,
+            author_id: int,
+            session: AsyncSession
+    ) -> Post:
+        # Подготавливаем данные для создания
+        post_dict = news_data.dict(exclude_unset=True)
+
+        # Устанавливаем время публикации если published=True
+        if post_dict.get('published') and not post_dict.get('time_published'):
+            post_dict['time_published'] = datetime.now(timezone.utc)
+
+        # Создаем объект поста
+        post = Post(
+            **post_dict,
+            author_id=author_id,  # Используем author_id из параметра
+            moderated=False  # По умолчанию пост не модерирован
+        )
+
+        session.add(post)
+        await session.flush()
+        await session.refresh(post)
+        return post
 
 
 

@@ -16,3 +16,27 @@ class NewsResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class NewsCreate(BaseModel):
+    title: str = Field(description='title')
+    content: Optional[str] = Field(None, description='Контент(описание)')
+    image_url: Optional[str] = Field(None, description='Ссылка на изображение')
+    video_url: Optional[str] = Field(None, description='Ссылка на видео')
+    published: Optional[bool] = Field(True)
+    time_published: Optional[datetime] = Field(None)
+
+# class NewsResponse(BaseModel):
+#     id: int
+#     title: str
+#     content: Optional[str]
+#     image_url: Optional[str]
+#     video_url: Optional[str]
+#     moderated: bool
+#     published: bool
+#     time_published: Optional[datetime]
+#     author_id: int
+#     time_created: datetime
+#
+#     class Config:
+#         from_attributes = True
