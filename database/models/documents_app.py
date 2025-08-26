@@ -16,6 +16,7 @@ class DocumentsApp(Base):
     price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     sale: Mapped[bool]
     limit_free: Mapped[int | None]
+    activity: Mapped[bool] = mapped_column(nullable=False, default=True)
 
     field = relationship("DocumentFields", back_populates="documents")
     tags = relationship("DocumentTags", back_populates="documents")
@@ -27,10 +28,11 @@ class DocumentFields(Base):
     document_id: Mapped[int] = mapped_column(ForeignKey("public.documents.id", ondelete='CASCADE'), nullable=False)
     field_name: Mapped[str]
     field_description: Mapped[str | None]
+    field_example: Mapped[str | None]
     service_field: Mapped[str]  # поле в самом документе для замены
     documents = relationship("DocumentsApp", back_populates="field")
 
-
+# TODO: переделать на ассоциативные таблицы
 class DocumentTags(Base):
     """Тэги для краткой сути документа или для легкого поиска, пока не решил"""
     __tablename__ = "document_tags"

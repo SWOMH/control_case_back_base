@@ -13,6 +13,8 @@ class SenderType(str, enum.Enum):
     USER = "user"
     CLIENT = "client"
     SUPPORT = "support"
+    LAWYER = 'lawyer'
+    SALESMAN = 'salesman'
     SYSTEM = "system"
 
 
