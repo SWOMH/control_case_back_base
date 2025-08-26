@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
+import random
 
+from config.redis import redis_db
 from database.models.users import Users, Token
 from database.logic.auth.auth import db_auth
 from exceptions.database_exc.auth import UserNotFoundExists, UserBannedException, UserInvalidEmailOrPasswordException, \
@@ -47,8 +49,32 @@ async def register_user(
 
 @router.post('/confirmed_message_email', status_code=status.HTTP_200_OK)
 async def send_message_confirmed(user_id: int):
-    ...
+    """
+    Метод для отправки сообщения подтверждения пользователю
+    на почту или телефон
+    пока делаю под почту но потом прийдется выдумывать еще и с телефоном
+    (буду использовать redis для хранения паролей)
+    в бд они не нужны да и редис может чиститься по времени
+    """
+    code = random.randint(1000, 9999)
+    user_email = await db_auth.get_user_by_id(user_id)
+    send_message = ... # Тут метод отправки
+    redis_db.set(f'{user_id}', f'{code}', 300)
+    return {"message": "message send"}
 
+
+@router.post('/code_acc', status_code=status.HTTP_200_OK)
+async def message_confirmed(user_id: int, code: int):
+    """
+    Метод подтверждения регистрации
+    Сравнивает коды и в случае совпадения делает аккаунт активированным
+    """
+    code_r = redis_db.get(f'{user_id}')
+    if code == code_r:
+        await db_auth.activate_user(user_id)
+        return status.HTTP_200_OK
+    else:
+        return status.HTTP_401_UNAUTHORIZED
 
 
 @router.post("/login", response_model=TokenResponse)

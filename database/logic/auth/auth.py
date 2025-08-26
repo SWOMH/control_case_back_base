@@ -283,6 +283,26 @@ class AuthUsers(DataBaseMainConnect):
         return user
 
     @connection
+    async def activate_user(self, user_id: int, session: AsyncSession):
+        """
+        Активирует пользователя
+        """
+        stmt = select(Users).options(
+            selectinload(Users.balance),
+            selectinload(Users.groups)
+        ).where(Users.id == user_id)
+
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise UserNotFoundExists
+
+        user.account_confirmed = True
+        await session.commit()
+
+
+    @connection
     async def delete_user(self, user_id: int, current_user: Users, session: AsyncSession) -> bool:
         """
         Мягкое удаление пользователя (деактивация)

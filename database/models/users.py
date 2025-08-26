@@ -26,7 +26,7 @@ class Users(Base):
     # is_support: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_banned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    account_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    account_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False) # подтвержден ли аккаунт
     # is_lawyer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     last_activity: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
