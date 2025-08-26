@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict
 
 
@@ -25,3 +25,15 @@ class DocumentSchema(BaseModel):
     limit_free: Optional[int] = Field(description='Кол-во бесплатных созданий документа в случаее, если он платен')
     fields: List[DocumentField]
     tags: List[Optional[DocumentTags]]
+
+    @field_validator('price')
+    def validate_price(cls, v, values):
+        if 'sale' in values and values['sale'] and (v is None or v <= 0):
+            raise ValueError('Платный документ должен иметь положительную цену')
+        return v
+
+    @field_validator('limit_free')
+    def validate_limit_free(cls, v, values):
+        if 'sale' in values and values['sale'] and v is not None and v < 0:
+            raise ValueError('Лимит бесплатных использований не может быть отрицательным')
+        return v
