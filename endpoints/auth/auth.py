@@ -20,6 +20,7 @@ from utils.auth import (
     get_current_active_user
 )
 from config.auth_config import get_access_token_expire_delta
+from utils.tasks import send_confirmation_email
 
 router = APIRouter(prefix="/auth", tags=["Авторизация"])
 security = HTTPBearer()
@@ -58,7 +59,7 @@ async def send_message_confirmed(user_id: int):
     """
     code = random.randint(1000, 9999)
     user_email = await db_auth.get_user_by_id(user_id)
-    send_message = ... # Тут метод отправки
+    send_confirmation_email.delay(user_email, code) # Тута отправляем сообщение
     redis_db.set(f'{user_id}', f'{code}', 300)
     return {"message": "message send"}
 
