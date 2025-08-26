@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from database.logic.documents.document import db_documents
 from database.models.users import Users
 from exceptions.database_exc.documents_exceptions import DocumentNotFoundException
+from schemas.admin_schemas import Permissions
 from schemas.documents_schema import DocumentSchemaCreate, DocumentSchemaResponse
 from utils.auth import get_current_active_user
+from utils.permissions import require_admin_or_permission
 
 router = APIRouter(prefix="/docs", tags=["Документы"])
 
@@ -16,3 +18,10 @@ async def get_all_documents(current_user: Users = Depends(get_current_active_use
     return documents
 
 
+@router.post('/create', response_model=DocumentSchemaResponse, status_code=status.HTTP_201_CREATED)
+async def create_document(document: DocumentSchemaCreate,
+                          current_user: Users = require_admin_or_permission(Permissions.CREATE_DOCUMENTS)):
+    try:
+        ...
+    except:
+        ...

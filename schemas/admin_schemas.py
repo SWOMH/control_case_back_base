@@ -65,6 +65,11 @@ class Permissions:
     UPDATE_USER_SALESMAN = "update_user_salesman"
     DELETE_USER_SALESMAN = "delete_user_salesman"
 
+    # Управление документами
+    CREATE_DOCUMENTS = 'create_documents'
+    UPDATE_DOCUMENTS = "update_documents"
+    DELETE_DOCUMENTS = "delete_documents"
+
     # Управление группами
     CREATE_GROUP = "create_group"
     UPDATE_GROUP = "update_group"
@@ -96,6 +101,7 @@ class Permissions:
         CREATE_NEWS, UPDATE_NEWS, DELETE_NEWS,
         VIEW_USER_LAWYER, CREATE_USER_LAWYER, UPDATE_USER_LAWYER, DELETE_USER_LAWYER,
         VIEW_USER_SALESMAN, CREATE_USER_SALESMAN, UPDATE_USER_SALESMAN, DELETE_USER_SALESMAN,
+        CREATE_DOCUMENTS, UPDATE_DOCUMENTS, DELETE_DOCUMENTS,
         CREATE_USER, UPDATE_USER, DELETE_USER, VIEW_USER,
         CREATE_GROUP, UPDATE_GROUP, DELETE_GROUP, VIEW_GROUP, MANAGE_GROUP_PERMISSIONS,
         CREATE_BONUS, UPDATE_BONUS, DELETE_BONUS, VIEW_BONUS,
