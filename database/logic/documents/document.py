@@ -9,14 +9,14 @@ from database.models.documents_app import DocumentsApp, DocumentCreated, Documen
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from exceptions.database_exc.documents_exceptions import DocumentAlreadyExistsException, DocumentNotFoundException
-from schemas.documents_schema import DocumentSchema
+from schemas.documents_schema import DocumentSchemaCreate, DocumentSchemaResponse
 from sqlalchemy import select, and_
 
 
 class DocumentDataBase(DataBaseMainConnect):
 
     @connection
-    async def create_document(self, document: DocumentSchema, session: AsyncSession):
+    async def create_document(self, document: DocumentSchemaCreate, session: AsyncSession):
         try:
             # 1. Проверка существования документа с таким же именем
             stmt = select(DocumentsApp).where(
@@ -116,6 +116,7 @@ class DocumentDataBase(DataBaseMainConnect):
             await session.rollback()
             raise e
 
+
     @connection
     async def get_document_by_id(self, document_id: int, session: AsyncSession):
         """Получение документа по ID со всеми связанными данными"""
@@ -137,6 +138,7 @@ class DocumentDataBase(DataBaseMainConnect):
 
         return document
 
+
     @connection
     async def get_all_documents(self, session: AsyncSession, skip: int = 0, limit: int = 100):
         """Получение всех документов с пагинацией"""
@@ -148,7 +150,10 @@ class DocumentDataBase(DataBaseMainConnect):
         ).offset(skip).limit(limit)
 
         result = await session.execute(stmt)
-        return result.scalars().all()
+        documents = result.scalars().all()
+        # return documents
+        return [DocumentSchemaResponse.model_validate(d) for d in documents]
+
 
     @connection
     async def update_document(self, document_id: int, update_data: dict, session: AsyncSession):
@@ -179,6 +184,7 @@ class DocumentDataBase(DataBaseMainConnect):
 
         await session.commit()
         return document
+
 
     @connection
     async def delete_document(self, document_id: int, session: AsyncSession):
