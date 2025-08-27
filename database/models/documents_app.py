@@ -19,7 +19,7 @@ class DocumentsApp(Base):
     activity: Mapped[bool] = mapped_column(nullable=False, default=True)
 
     field = relationship("DocumentFields", back_populates="documents")
-    tags = relationship("DocumentTags", back_populates="documents")
+    # tags = relationship("DocumentTags", back_populates="documents")
 
 
 class DocumentFields(Base):
@@ -32,14 +32,14 @@ class DocumentFields(Base):
     service_field: Mapped[str]  # поле в самом документе для замены
     documents = relationship("DocumentsApp", back_populates="field")
 
-# TODO: переделать на ассоциативные таблицы
-class DocumentTags(Base):
-    """Тэги для краткой сути документа или для легкого поиска, пока не решил"""
-    __tablename__ = "document_tags"
-    id: Mapped[intpk]
-    tag_name: Mapped[str]
-    document_id: Mapped[int] = mapped_column(ForeignKey("public.documents.id", ondelete='CASCADE'), nullable=False)
-    documents = relationship("DocumentsApp", back_populates="field")
+# TODO: переделать на ассоциативные таблицы (решил вообще убрать. Добавлю по необходимости в проде)
+# class DocumentTags(Base):
+#     """Тэги для краткой сути документа или для легкого поиска, пока не решил"""
+#     __tablename__ = "document_tags"
+#     id: Mapped[intpk]
+#     tag_name: Mapped[str]
+#     document_id: Mapped[int] = mapped_column(ForeignKey("public.documents.id", ondelete='CASCADE'), nullable=False)
+#     documents = relationship("DocumentsApp", back_populates="field")
 
 
 class PurchasedDocuments(Base):

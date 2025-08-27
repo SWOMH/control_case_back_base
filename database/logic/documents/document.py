@@ -5,7 +5,7 @@ from database.main_connection import DataBaseMainConnect
 from database.decorator import connection
 from database.models.documents import DocumentsUser
 from database.models.documents_app import DocumentsApp, DocumentCreated, DocumentFields, \
-    DocumentTags, PurchasedDocuments
+    PurchasedDocuments
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from exceptions.database_exc.documents_exceptions import DocumentAlreadyExistsException, DocumentNotFoundException
@@ -126,8 +126,8 @@ class DocumentDataBase(DataBaseMainConnect):
                 DocumentsApp.activity == True
             )
         ).options(
-            selectinload(DocumentsApp.field),
-            selectinload(DocumentsApp.tags).selectinload(DocumentTagAssociation.tag)
+            selectinload(DocumentsApp.field)
+            # selectinload(DocumentsApp.tags).selectinload(DocumentTagAssociation.tag)
         )
 
         result = await session.execute(stmt)
@@ -145,8 +145,8 @@ class DocumentDataBase(DataBaseMainConnect):
         stmt = select(DocumentsApp).where(
             DocumentsApp.activity == True
         ).options(
-            selectinload(DocumentsApp.field),
-            selectinload(DocumentsApp.tags).selectinload(DocumentTagAssociation.tag)
+            selectinload(DocumentsApp.field)
+            # selectinload(DocumentsApp.tags).selectinload(DocumentTagAssociation.tag)
         ).offset(skip).limit(limit)
 
         result = await session.execute(stmt)
