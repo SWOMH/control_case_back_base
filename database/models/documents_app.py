@@ -1,9 +1,19 @@
 from decimal import Decimal
 from datetime import date
+from enum import Enum
+
 from sqlalchemy import Date, DateTime, ForeignKey, Numeric, Text, text
 from database.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.types import intpk
+
+
+class FieldType(str, Enum):
+    INTEGER = 'integer'
+    FLOAT = 'float'
+    STRING = 'string'
+    DATE = 'date'
+    DATETIME = 'datetime'  # хз зачем, но докину
 
 
 class DocumentsApp(Base):
@@ -27,6 +37,7 @@ class DocumentFields(Base):
     id: Mapped[intpk]
     document_id: Mapped[int] = mapped_column(ForeignKey("public.documents.id", ondelete='CASCADE'), nullable=False)
     field_name: Mapped[str]
+    field_type: Mapped[FieldType] = mapped_column(Enum(FieldType), nullable=False, default=FieldType.STRING)
     field_description: Mapped[str | None]
     field_example: Mapped[str | None]
     service_field: Mapped[str]  # поле в самом документе для замены

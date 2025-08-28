@@ -2,6 +2,7 @@ from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
+
 # Базовые схемы для вложенных моделей без ID
 class DocumentFieldBase(BaseModel):
     field_name: str = Field(description='Название поля для клиента')
@@ -9,17 +10,21 @@ class DocumentFieldBase(BaseModel):
     field_example: str = Field(description='Пример того как должно быть заполнено поле')
     service_field: str = Field(description='Название переменной в самом документе')
 
+
 class DocumentTagsBase(BaseModel):
     tag_name: str = Field(description='Название тега (допустим: от приставов)')
+
 
 # Схемы для ответа с ID
 class DocumentFieldResponse(DocumentFieldBase):
     id: int
     document_id: int
 
+
 class DocumentTagsResponse(DocumentTagsBase):
     id: int
     document_id: int
+
 
 # Базовая схема документа без ID
 class DocumentBase(BaseModel):
@@ -43,10 +48,12 @@ class DocumentBase(BaseModel):
             raise ValueError('Лимит бесплатных использований не может быть отрицательным')
         return v
 
+
 # Схема для создания документа (с вложенными объектами без ID)
 class DocumentSchemaCreate(DocumentBase):
     fields: List[DocumentFieldBase]
-    tags: List[DocumentTagsBase]
+    # tags: List[DocumentTagsBase]
+
 
 # Схема для ответа (с ID и вложенными объектами с ID)
 class DocumentSchemaResponse(DocumentBase):
@@ -54,7 +61,18 @@ class DocumentSchemaResponse(DocumentBase):
     created_at: datetime
     updated_at: datetime
     fields: List[DocumentFieldResponse]
-    tags: List[DocumentTagsResponse]
+    # tags: List[DocumentTagsResponse]
+
+
+class DocumentGenerateFieldsSchema(BaseModel):
+    id: int
+    value: str
+
+
+class DocumentGenerateDocSchema(BaseModel):
+    id: int
+    fields: list[DocumentGenerateFieldsSchema]
+
 
 # Дополнительные схемы по необходимости
 class DocumentSchemaUpdate(BaseModel):

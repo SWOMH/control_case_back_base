@@ -118,7 +118,7 @@ class DocumentDataBase(DataBaseMainConnect):
 
 
     @connection
-    async def get_document_by_id(self, document_id: int, session: AsyncSession):
+    async def get_document_by_id(self, document_id: int, session: AsyncSession) -> DocumentSchemaResponse:
         """Получение документа по ID со всеми связанными данными"""
         stmt = select(DocumentsApp).where(
             and_(

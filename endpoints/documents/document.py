@@ -3,7 +3,7 @@ from database.logic.documents.document import db_documents
 from database.models.users import Users
 from exceptions.database_exc.documents_exceptions import DocumentNotFoundException
 from schemas.admin_schemas import Permissions
-from schemas.documents_schema import DocumentSchemaCreate, DocumentSchemaResponse
+from schemas.documents_schema import DocumentSchemaCreate, DocumentSchemaResponse, DocumentGenerateDocSchema
 from utils.auth import get_current_active_user
 from utils.permissions import require_admin_or_permission
 from pathlib import Path
@@ -20,6 +20,21 @@ async def get_all_documents(current_user: Users = Depends(get_current_active_use
         return {'message': "documents is empty"}
     return documents
 
+
+@router.get('/{document_id}', tags=["Документы"])
+async def get_document_by_id(document_id: int,
+                             current_user: Users = Depends(get_current_active_user)) -> DocumentSchemaResponse:
+    try:
+        document = await db_documents.get_document_by_id(document_id)
+        return document
+    except:
+        ...
+
+
+@router.post('/generate', tags=['Документы'])
+async def generate_document(document: DocumentGenerateDocSchema,
+                          user: Users = Depends()):
+    ...
 
 @router.post('/create', response_model=DocumentSchemaResponse, status_code=status.HTTP_201_CREATED)
 async def add_document(document: DocumentSchemaCreate,
