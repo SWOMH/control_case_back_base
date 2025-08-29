@@ -1,24 +1,32 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional, List
 from datetime import datetime
-from datetime import date
 
+class ChatCreateResponse(BaseModel):
+    id: int
+    user_id: int
+    user_support_id: Optional[int]
+    date_created: datetime
+    active: bool
+    resolved: bool
 
+class MessageCreateRequest(BaseModel):
+    message: Optional[str] = Field(None, description="Текст сообщения (может быть пустым при файлах)")
 
-class ChatMessageRequest(BaseModel):
-    """
-    Схема для запроса чата с поддержкой
-    """
-    id: int = Field(..., description='id пользователя')
-    
+class MessageResponse(BaseModel):
+    id: int
+    chat_id: int
+    sender_id: Optional[int]
+    sender_type: str
+    message: Optional[str]
+    created_at: datetime
+    status: str
 
-class ChatMessagesResponse(BaseModel):
-    """
-    Схема ответа пользователя после регистрации
-    """
-    id: int = Field(..., description='id пользователя')
-    email: str
-    fio: str
-    client: bool
-    groups: Optional[list[str]] = Field(None, description="Группы пользователя")
-
+class ChatDetailResponse(BaseModel):
+    id: int
+    user_id: int
+    user_support_id: Optional[int]
+    date_created: datetime
+    active: bool
+    resolved: bool
+    messages: List[MessageResponse] = []

@@ -72,7 +72,7 @@ class Chat(Base):
         Создаётся при первом сообщении пользователя.
         Через relationship можно быстро получить все сообщения, участников и рейтинг.
     """
-    __tablename__ = "chat"
+    __tablename__ = "chats"
     __table_args__ = {'schema': 'public',
                       'extend_existing': True}
     id: Mapped[intpk]
@@ -85,9 +85,9 @@ class Chat(Base):
     resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     date_close: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # связи
-    messages = relationship("ChatMessage", back_populates="chat", cascade="all, delete-orphan")
-    participants = relationship("ChatParticipant", back_populates="chat", cascade="all, delete-orphan")
-    rating = relationship("ChatRating", back_populates="chat", uselist=False)
+    messages = relationship("ChatMessage", back_populates="chats", cascade="all, delete-orphan")
+    participants = relationship("ChatParticipant", back_populates="chats", cascade="all, delete-orphan")
+    rating = relationship("ChatRating", back_populates="chats", uselist=False)
 
 
 class ChatMessage(Base):
@@ -104,7 +104,7 @@ class ChatMessage(Base):
     """
     __tablename__ = "chat_messages"
     id: Mapped[intpk]
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id", ondelete="CASCADE"), nullable=False)
     sender_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=True)
     sender_type: Mapped[SenderType] = mapped_column(Enum(SenderType), nullable=False, default=SenderType.USER)
     message: Mapped[str] = mapped_column(Text, nullable=True)
@@ -168,7 +168,7 @@ class ChatParticipant(Base):
     """
     __tablename__ = "chat_participant"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False)  # например: "client", "support", "lawyer"
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
@@ -187,7 +187,7 @@ class SupportHistoryChat(Base):
     """
     __tablename__ = "support_history_chat"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id"), nullable=False)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id"), nullable=False)
     old_support_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
     reason_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.reason_close_chat.id"), nullable=True)
     history_date_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.support_history_date.id"), nullable=True)
@@ -223,7 +223,7 @@ class ChatRating(Base):
     """
     __tablename__ = "chat_rating"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat.id", ondelete="CASCADE"), nullable=False, unique=True)
+    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id", ondelete="CASCADE"), nullable=False, unique=True)
     rating: Mapped[int] = mapped_column(Integer, nullable=False)  # например 1-5
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
