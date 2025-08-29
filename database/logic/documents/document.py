@@ -8,9 +8,12 @@ from database.models.documents_app import DocumentsApp, DocumentCreated, Documen
     PurchasedDocuments
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from exceptions.database_exc.documents_exceptions import DocumentAlreadyExistsException, DocumentNotFoundException
+from database.models.users import Users
+from exceptions.database_exc.documents_exceptions import DocumentAlreadyExistsException, DocumentNotFoundException, \
+    InsufficientFundsForGenerateDocument
 from schemas.documents_schema import DocumentSchemaCreate, DocumentSchemaResponse
 from sqlalchemy import select, and_
+from datetime import date
 
 
 class DocumentDataBase(DataBaseMainConnect):
@@ -115,6 +118,29 @@ class DocumentDataBase(DataBaseMainConnect):
         except Exception as e:
             await session.rollback()
             raise e
+
+
+    @connection
+    async def check_user_can_generate(self, user: Users, document_price: float) -> bool:
+        """Проверяет возможность создания документа (если документ платный)"""
+
+        if user.is_admin:
+            return True  # Тоже пока заглушка для тестов
+        # TODO: Тут должен быть метод получения баланса пользователя, а пока заглушка будет
+        return False if user.balance < document_price else True
+
+
+    @connection
+    async def generate_document_created(self, document_id: int, user_id: int, session: AsyncSession):
+        """Просто записывает какой человек создал документ и когда"""
+        generate_doc = DocumentCreated(
+            document_id=document_id,
+            user_id=user_id,
+            created=True,
+            date=date.today()
+        )
+        session.add(generate_doc)
+        session.commit()
 
 
     @connection
