@@ -22,6 +22,7 @@ class Users(Base):
     patronymic: Mapped[str]  # отчество
     is_client: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # флаг клиента
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    curt_href: Mapped[str | None]
     # is_staff: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # доступ к админке
     # is_support: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_banned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
