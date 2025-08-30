@@ -77,6 +77,12 @@ class Permissions:
     VIEW_GROUP = "view_group"
     MANAGE_GROUP_PERMISSIONS = "manage_group_permissions"
 
+    # Управление Стадиями
+    READ_ALL_STAGE = 'read_all_stage'
+    CREATE_STAGE = 'create_stage'
+    UPDATE_STAGE = 'update_stage'
+    DELETE_STAGE = 'delete_stage'
+
     # Управление бонусами
     CREATE_BONUS = "create_bonus"
     UPDATE_BONUS = "update_bonus"
@@ -106,6 +112,7 @@ class Permissions:
         CREATE_GROUP, UPDATE_GROUP, DELETE_GROUP, VIEW_GROUP, MANAGE_GROUP_PERMISSIONS,
         CREATE_BONUS, UPDATE_BONUS, DELETE_BONUS, VIEW_BONUS,
         CREATE_DEDUCTION, UPDATE_DEDUCTION, DELETE_DEDUCTION, VIEW_DEDUCTION,
+        READ_ALL_STAGE, CREATE_STAGE, UPDATE_STAGE, DELETE_STAGE,
         CREATE_BONUSES_TYPE, UPDATE_BONUSES_TYPE, DELETE_BONUSES_TYPE,
         VIEW_BONUSES_TYPE, VIEW_DEDUCTION_TYPE,
         CREATE_DEDUCTION_TYPE, UPDATE_DEDUCTION_TYPE, DELETE_DEDUCTION_TYPE
