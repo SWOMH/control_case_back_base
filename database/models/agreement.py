@@ -15,10 +15,18 @@ class AgreementClient(Base):
     __tablename__ = 'agreements_clients'
     id: Mapped[intpk]
     user_id: Mapped[int] = mapped_column(ForeignKey('public.users.id'))
-    date_conclusion: Mapped[date] = mapped_column(Date)
+    date_conclusion: Mapped[date] = mapped_column(Date)  # Дата заключения договора
+    expected_completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # Предпологаемая дата окончания
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # Дата окончания
     price: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     discount_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     price_after_discount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    number_of_payments: Mapped[int] = mapped_column()  # Кол-во платежей (заполняется сразу, потом можно будет изменить)
+
+    discount_associations: Mapped[list["DiscountAssociation"]] = relationship(
+        back_populates="agreement",
+        lazy="selectin"
+    )
 
     __table_args__ = (
         Index('ix_agreements_clients_user_id', 'user_id'),  # Для поиска договоров по пользователю
@@ -33,6 +41,12 @@ class Discount(Base):
     discount_type: Mapped[str] = mapped_column(nullable=False)
     discount_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     date_create: Mapped[date] = mapped_column(Date, nullable=False)
+    active: bool = mapped_column(default=True)
+
+    discount_associations: Mapped[list["DiscountAssociation"]] = relationship(
+        back_populates="discount",
+        lazy="selectin"
+    )
 
     __table_args__ = (
         Index('ix_discount_date_create', 'date_create'),  # Для фильтрации по дате создания
@@ -47,6 +61,9 @@ class DiscountAssociation(Base):
     agreement_id: Mapped[int] = mapped_column(ForeignKey('public.agreements_clients.id'), nullable=False)
     discount_id: Mapped[int] = mapped_column(ForeignKey('public.discount.id'), nullable=False)
     active: Mapped[bool] = mapped_column(server_default=Text('true'), nullable=False)
+
+    agreement: Mapped["AgreementClient"] = relationship(back_populates="discount_associations")
+    discount: Mapped["Discount"] = relationship(back_populates="discount_associations")
 
     __table_args__ = (
         Index('ix_discount_association_agreement_id', 'agreement_id'),  # Для поиска скидок по договору
