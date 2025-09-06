@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.logic.agreements.agreement import db_agreements
+from database.models.agreement import AgreementClient
 from database.models.schedule import PaymentSchedule, HistoryEditSchedule, StatusPayment
 from schemas.schedule_schema import ScheduleResponse
 from exceptions.database_exc.agreement import AgreementNotFound
