@@ -25,6 +25,7 @@ class PaymentSchedule(Base):
     deducted_id: Mapped[int | None] = mapped_column(ForeignKey('public.discount.id'), nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
+    date_payment_done: Mapped[date | None] = mapped_column(Date, nullable=True)  # Когда внесли платеж
 
     __table_args__ = (
         Index('ix_payment_schedule_agreement_id', 'agreement_id'),  # Для поиска платежей по договору
@@ -35,7 +36,6 @@ class PaymentSchedule(Base):
     )
 
 
-# ТУт нужно таблицу с историей ебануть еще
 class HistoryEditSchedule(Base):
     """Тут будет история изменений расписания платежей"""
     __tablename__ = 'history_edit_schedule'

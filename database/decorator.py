@@ -40,7 +40,7 @@ def connection(self, isolation_level: Optional[str] = None, commit: bool = True)
                     return result
                 except Exception as e:
                     await session.rollback()
-                    raise
+                    raise e
                 finally:
                     await session.close()
         return wrapper

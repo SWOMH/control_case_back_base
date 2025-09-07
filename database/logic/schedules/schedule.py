@@ -23,7 +23,6 @@ class SchedulePayments(DataBaseMainConnect):
         schedule = result.scalars().all()
         return schedule
 
-
     @connection
     async def generate_schedule(self, agreement_id: int, first_payment: Decimal | None, session: AsyncSession):
         """
@@ -38,6 +37,7 @@ class SchedulePayments(DataBaseMainConnect):
         if agreement is None:
             raise AgreementNotFound
 
+        # TODO: нужно переделать хуйню, ибо он удаляет график, а там оплаты могут быть
         # Удаляем существующий график платежей для этого договора
         await session.execute(
             delete(PaymentSchedule).where(PaymentSchedule.agreement_id == agreement_id)
@@ -45,7 +45,9 @@ class SchedulePayments(DataBaseMainConnect):
 
         # Определяем базовые параметры
         today = date.today()
-        total_amount = agreement.price_after_discount or agreement.price
+        total_amount = agreement.price_after_discount if agreement.price_after_discount < \
+                                                         agreement.price and agreement.price_after_discount != 0 \
+            else agreement.price
         remaining_amount = total_amount
 
         # Обрабатываем первый платеж, если он есть
@@ -72,8 +74,7 @@ class SchedulePayments(DataBaseMainConnect):
             session.add(first_schedule)
             remaining_amount -= first_payment
 
-        # Определяем количество платежей (это поле должно быть в вашей модели)
-        # Если его нет, нужно добавить в AgreementClient
+        # Определяем количество платежей
         number_of_payments = agreement.number_of_payments
 
         # Рассчитываем сумму регулярного платежа
@@ -108,3 +109,6 @@ class SchedulePayments(DataBaseMainConnect):
         return schedules
 
 
+    # Тут еще не решил как сделать. Нужно зарисовать схему взаимодействия с беком, чтобы определиться как строить все платежи
+    # @connection(isolation_level='SERIALIZABLE')
+    # async def update_schedule_automatic(self, ):
