@@ -44,6 +44,7 @@ class HistoryEditSchedule(Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[StatusPayment] = mapped_column(Enum(StatusPayment), nullable=False, default=StatusPayment.EXPECTED)
+    date_edit: Mapped[date] = mapped_column(Date, nullable=False)
 
     __table_args__ = (
         Index('ix_history_edit_schedule_schedule_id', 'schedule_id'),  # Для поиска истории по платежу

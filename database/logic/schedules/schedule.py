@@ -1,8 +1,9 @@
 from datetime import date
 from decimal import Decimal
+from typing import Optional
+
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import delete
-
 from database.main_connection import DataBaseMainConnect
 from database.decorator import connection
 from sqlalchemy.orm import selectinload
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.logic.agreements.agreement import db_agreements
 from database.models.agreement import AgreementClient
 from database.models.schedule import PaymentSchedule, HistoryEditSchedule, StatusPayment
+from exceptions.database_exc.schedule import ScheduleNotFound
 from schemas.schedule_schema import ScheduleResponse
 from exceptions.database_exc.agreement import AgreementNotFound
 
@@ -26,7 +28,7 @@ class SchedulePayments(DataBaseMainConnect):
     @connection
     async def generate_schedule(self, agreement_id: int, first_payment: Decimal | None, session: AsyncSession):
         """
-        Генерирует график платежей для договора
+        Генерирует график платежей для договора (только при заключении)
         """
         # Получаем данные договора
         agreement_data = await session.execute(
@@ -110,5 +112,26 @@ class SchedulePayments(DataBaseMainConnect):
 
 
     # Тут еще не решил как сделать. Нужно зарисовать схему взаимодействия с беком, чтобы определиться как строить все платежи
-    # @connection(isolation_level='SERIALIZABLE')
-    # async def update_schedule_automatic(self, ):
+    @connection(isolation_level='SERIALIZABLE')
+    async def update_schedule_automatic(self, schedule: ScheduleResponse, session: AsyncSession) -> ScheduleResponse | Optional[ScheduleResponse]:
+        """Меняет что-то в расписании (1 дату)"""
+        schedule_b = await session.execute(
+            select(PaymentSchedule).where(PaymentSchedule.id == int(schedule.id))
+        )
+        schedule_data = schedule_b.scalar_one_or_none()
+        if schedule_data is None:
+            raise ScheduleNotFound
+
+        # сохраняем в историю (надо бы еще ссылку на человека сделать, кто изменил)
+        schedule_history = HistoryEditSchedule(schedule_id=schedule_data.id,
+                                               amount=schedule_data.amount,
+                                               date=schedule_data.date,
+                                               status=schedule_data.status,
+                                               date_edit=date.today())
+        session.add(schedule_history)
+
+        schedule_data.date = schedule.date
+        schedule_data.status = schedule.status
+        schedule_data.amount = schedule.amount
+        # оплаты я сюда не буду прикручивать. Пускай оно просто падает на баланс, а потом в день оплаты спишет само с баланса
+        return schedule_data

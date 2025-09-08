@@ -20,6 +20,7 @@ class HistoryEditScheduleBase(BaseModel):
     amount: Decimal = Field(description='Сумма платежа в этот месяц')
     date: date = Field(description='Дата платежа')
     status: StatusPayment = Field(default=StatusPayment.EXPECTED, description='Статус платежа')
+    date_edit: date = Field(description='Дата когда внесли изменения в основную таблицу')
 
 
 class ScheduleResponse(ScheduleBase):
