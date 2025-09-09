@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 
 from schemas.admin_schemas import Permissions
@@ -11,7 +11,7 @@ from utils.permissions import require_admin_or_permission
 router = APIRouter(prefix='/news', tags=['Новости'])
 
 
-@router.get(response_model=NewsResponse, status_code=status.HTTP_200_OK)
+@router.get('/', response_model=NewsResponse, status_code=status.HTTP_200_OK)
 async def get_news() -> list[NewsResponse]:
     """
     Получение новостей (Только те что прошли модерацию(в зависимости от конфига))
@@ -39,7 +39,7 @@ async def get_news() -> list[NewsResponse]:
 @router.post('/create', response_model=NewsResponse, status_code=status.HTTP_201_CREATED)
 async def create_news(
         news: NewsCreate,
-        user: Users = require_admin_or_permission(Permissions.CREATE_NEWS)
+        user: Users = Depends(require_admin_or_permission(Permissions.CREATE_NEWS))
 ):
     try:
         # Создаем пост с author_id из аутентифицированного пользователя
@@ -64,7 +64,7 @@ async def create_news(
 async def update_news(
         news_id: int,
         news_data: NewsUpdate,
-        user: Users = require_admin_or_permission(Permissions.UPDATE_NEWS)
+        user: Users = Depends(require_admin_or_permission(Permissions.UPDATE_NEWS))
 ):
     """Обновление поста"""
     try:
@@ -85,7 +85,7 @@ async def update_news(
 @router.delete('/{news_id}')
 async def delete_news(
         news_id: int,
-        user: Users = require_admin_or_permission(Permissions.DELETE_NEWS)
+        user: Users = Depends(require_admin_or_permission(Permissions.DELETE_NEWS))
 ):
     """Мягкое удаление поста"""
     try:
@@ -106,7 +106,7 @@ async def delete_news(
 @router.delete('/hard/{news_id}')
 async def hard_delete_news(
         news_id: int,
-        user: Users = require_admin_or_permission(Permissions.DELETE_NEWS)
+        user: Users = Depends(require_admin_or_permission(Permissions.DELETE_NEWS))
 ):
     """Полное удаление поста (только для админов)"""
     try:

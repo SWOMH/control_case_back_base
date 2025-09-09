@@ -12,7 +12,7 @@ from database.logic.stages.stage import db_stage
 router = APIRouter(prefix="/stage", tags=["Стадии"])
 
 
-@router.get(response_model=list[StageUpdateSchema], status_code=status.HTTP_200_OK)
+@router.get('', response_model=list[StageUpdateSchema], status_code=status.HTTP_200_OK)
 async def get_all_stage(user: Users = Depends(get_current_active_user)):
     all_stage = await db_stage.get_stages_user(user.id)
     if all_stage is None:
@@ -24,7 +24,7 @@ async def get_all_stage(user: Users = Depends(get_current_active_user)):
     return StageUpdateSchema.model_validate(all_stage)
 
 
-@router.post(response_model=StageUpdateSchema, status_code=status.HTTP_201_CREATED)
+@router.post('', response_model=StageUpdateSchema, status_code=status.HTTP_201_CREATED)
 async def create_stage(stage: StageCreateSchema,
                        user: Users = Depends(require_admin_or_permission(Permissions.CREATE_STAGE))):
     try:

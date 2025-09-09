@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict
 from datetime import datetime, date
 from schemas.balance_schema import UserBalanceOut
-from schemas.court_schema import CourtStageOut
+from schemas.court_schema import StageCreateSchema
 
 from pydantic import BaseModel, Field, EmailStr, constr, field_validator
 

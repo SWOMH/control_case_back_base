@@ -1,4 +1,6 @@
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from config.constants import DEV_CONSTANT
 from database.logic.documents.document import db_documents
 from database.models.users import Users
 from exceptions.database_exc.documents_exceptions import DocumentNotFoundException
@@ -94,7 +96,7 @@ async def generate_pdf(document: DocumentGenerateDocSchema,
 
 @router.post('/create', response_model=DocumentSchemaResponse, status_code=status.HTTP_201_CREATED)
 async def add_document(document: DocumentSchemaCreate,
-                       current_user: Users = require_admin_or_permission(Permissions.CREATE_DOCUMENTS),
+                       current_user: Users = Depends(require_admin_or_permission(Permissions.CREATE_DOCUMENTS)),
                        file: UploadFile = File(...)):
     try:
         # Проверяем тип файла
@@ -109,9 +111,9 @@ async def add_document(document: DocumentSchemaCreate,
 
         # TODO: Не знаю как сейвить либо "{Название_компании}{id_на_s3}.docx" или как-то иначе
         # unique_filename = f"{uuid.uuid4()}{file_extension}"
-        COMPANY_NAME = 'roga_and_copita'
-        date = '27_08_25'
-        id = '10'
+        COMPANY_NAME = DEV_CONSTANT.company_name
+        date = datetime.now().strftime("%d_%m_%Y")
+        id = uuid.uuid4()
         unique_filename = f"{COMPANY_NAME}__{date}__{id}{file_extension}"
 
         upload_dir = Path("uploads/documents")
