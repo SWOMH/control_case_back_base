@@ -2,12 +2,13 @@ from datetime import datetime
 from decimal import Decimal
 import enum
 from sqlalchemy import (
-    Integer, String, DateTime, Numeric, ForeignKey, Text, Enum, JSON, Index, event
+    Integer, String, DateTime, Numeric, ForeignKey, Text, JSON, Index, event
 )
 import uuid
 from database.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.types import intpk
+from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 
 
 # === Enums ===
@@ -31,7 +32,7 @@ class OperationType(Base):
     code: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)  # например: 'manual_topup', 'invoice_payment'
     title: Mapped[str] = mapped_column(String(255), nullable=False)             # человеко-читаемое имя
     direction: Mapped[TransactionDirection] = mapped_column(
-        Enum(TransactionDirection), nullable=False, default=TransactionDirection.CREDIT
+        PgEnum(TransactionDirection, name='transaction_direction_enum', create_constraint=True, create_type=False), nullable=False, default=TransactionDirection.CREDIT
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -62,13 +63,13 @@ class BalanceOperation(Base):
     id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="CASCADE"), nullable=False)
     operation_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.operation_type.id"), nullable=False)
-    direction: Mapped[TransactionDirection] = mapped_column(Enum(TransactionDirection), nullable=False)
+    direction: Mapped[TransactionDirection] = mapped_column(PgEnum(TransactionDirection, name='transaction_direction_enum', create_constraint=True, create_type=False), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2),
                                             nullable=False)  # положительное число; sign определяется direction
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="RUB")  # валюта. По сути не нужна, но пускай будет
     balance_after: Mapped[Decimal | None] = mapped_column(Numeric(18, 2),
                                                           nullable=True)  # snapshot баланса после операции
-    status: Mapped[TransactionStatus] = mapped_column(Enum(TransactionStatus), nullable=False,
+    status: Mapped[TransactionStatus] = mapped_column(PgEnum(TransactionStatus, name='transaction_status_enum', create_constraint=True, create_type=False), nullable=False,
                                                       default=TransactionStatus.COMPLETED)  # важен для обработки асинхронных платежей:
                                                                                             # сначала pending, потом completed/failed.
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
@@ -104,7 +105,7 @@ class PaymentRequest(Base):
 
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     status: Mapped[TransactionStatus] = mapped_column(
-        Enum(TransactionStatus), nullable=False, default=TransactionStatus.PENDING
+        PgEnum(TransactionStatus, name='transaction_status_enum', create_constraint=True, create_type=False), nullable=False, default=TransactionStatus.PENDING
     )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)

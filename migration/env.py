@@ -9,15 +9,14 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from database.models.users import *
-from database.models.support import (Chat, ChatAttachment, MessageReadReceipt,
-                                     SupportHistoryChat, SupportHistoryDate,
-                                     ChatParticipant, ClientLawyerAssignment,
-                                     ChatRating)
+from database.models.support import *
 from database.models.balance import *
 from database.models.court import *
 from database.models.documents import *
 from database.models.documents_app import *
 from database.models.notifications import *
+from database.models.agreement import *
+from database.models.schedule import *
 from constants import DEV_CONSTANT
 from database.base import Base
 

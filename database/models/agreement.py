@@ -1,8 +1,6 @@
-from datetime import datetime
 from decimal import Decimal
-import enum
 from sqlalchemy import (
-    Integer, String, DateTime, Numeric, ForeignKey, Text, Enum, JSON, Index, Date
+    Numeric, ForeignKey, Index, Date
 )
 from database.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -31,6 +29,7 @@ class AgreementClient(Base):
     __table_args__ = (
         Index('ix_agreements_clients_user_id', 'user_id'),  # Для поиска договоров по пользователю
         Index('ix_agreements_clients_date_conclusion', 'date_conclusion'),  # Для фильтрации по дате
+        {'schema': 'public'}
     )
 
 
@@ -41,7 +40,7 @@ class Discount(Base):
     discount_type: Mapped[str] = mapped_column(nullable=False)
     discount_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     date_create: Mapped[date] = mapped_column(Date, nullable=False)
-    active: bool = mapped_column(default=True)
+    active: Mapped[bool] = mapped_column(default=True)
 
     discount_associations: Mapped[list["DiscountAssociation"]] = relationship(
         back_populates="discount",
@@ -51,6 +50,7 @@ class Discount(Base):
     __table_args__ = (
         Index('ix_discount_date_create', 'date_create'),  # Для фильтрации по дате создания
         Index('ix_discount_type', 'discount_type'),  # Для поиска по типу скидки
+        {'schema': 'public'}
     )
 
 
@@ -60,7 +60,7 @@ class DiscountAssociation(Base):
     id: Mapped[intpk]
     agreement_id: Mapped[int] = mapped_column(ForeignKey('public.agreements_clients.id'), nullable=False)
     discount_id: Mapped[int] = mapped_column(ForeignKey('public.discount.id'), nullable=False)
-    active: Mapped[bool] = mapped_column(server_default=Text('true'), nullable=False)
+    active: Mapped[bool] = mapped_column(server_default='true', nullable=False)
 
     agreement: Mapped["AgreementClient"] = relationship(back_populates="discount_associations")
     discount: Mapped["Discount"] = relationship(back_populates="discount_associations")

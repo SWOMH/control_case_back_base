@@ -1,16 +1,15 @@
-from datetime import datetime
 from decimal import Decimal
 import enum
 from sqlalchemy import (
-    Integer, String, DateTime, Numeric, ForeignKey, Text, Enum, JSON, Index, Date
+    Numeric, ForeignKey, Index, Date
 )
+from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from database.base import Base
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 from database.types import intpk
-from datetime import date
 
 
-class StatusPayment(str, Enum):
+class StatusPayment(str, enum.Enum):
     PAID = 'paid'  # оплачено
     OVERDUE = 'overdue'  # просрочено
     EXPECTED = 'expected'  # ожидается
@@ -19,9 +18,9 @@ class StatusPayment(str, Enum):
 
 class PaymentSchedule(Base):
     __tablename__ = 'payment_schedule'
-    id: [intpk]
+    id: Mapped[intpk]
     agreement_id: Mapped[int] = mapped_column(ForeignKey('public.agreements_clients.id'), nullable=False)
-    status: Mapped[StatusPayment] = mapped_column(Enum(StatusPayment), nullable=False, default=StatusPayment.EXPECTED)
+    status: Mapped[StatusPayment] = mapped_column(PgEnum(StatusPayment, name='status_payment_enum', create_constraint=True, create_type=False), nullable=False, default=StatusPayment.EXPECTED)
     deducted_id: Mapped[int | None] = mapped_column(ForeignKey('public.discount.id'), nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -33,6 +32,7 @@ class PaymentSchedule(Base):
         Index('ix_payment_schedule_date', 'date'),  # Для фильтрации по дате
         Index('ix_payment_schedule_agreement_status', 'agreement_id', 'status'),  # Составной индекс
         Index('ix_payment_schedule_deducted_id', 'deducted_id'),  # Для поиска по вычету
+        {'schema': 'public'}
     )
 
 
@@ -43,11 +43,12 @@ class HistoryEditSchedule(Base):
     schedule_id: Mapped[int] = mapped_column(ForeignKey('public.payment_schedule.id'), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
-    status: Mapped[StatusPayment] = mapped_column(Enum(StatusPayment), nullable=False, default=StatusPayment.EXPECTED)
+    status: Mapped[StatusPayment] = mapped_column(PgEnum(StatusPayment, name='status_payment_enum', create_constraint=True, create_type=False), nullable=False, default=StatusPayment.EXPECTED)
     date_edit: Mapped[date] = mapped_column(Date, nullable=False)
 
     __table_args__ = (
         Index('ix_history_edit_schedule_schedule_id', 'schedule_id'),  # Для поиска истории по платежу
         Index('ix_history_edit_schedule_date', 'date'),  # Для фильтрации по дате изменения
         Index('ix_history_edit_schedule_status', 'status'),  # Для фильтрации по статусу
+        {'schema': 'public'}
     )

@@ -2,7 +2,8 @@ from decimal import Decimal
 from datetime import date
 from enum import Enum
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, Text, text
+from sqlalchemy.dialects.postgresql import ENUM as PgEnum
+from sqlalchemy import Date, ForeignKey, Numeric, text
 from database.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.types import intpk
@@ -14,6 +15,7 @@ class FieldType(str, Enum):
     STRING = 'string'
     DATE = 'date'
     DATETIME = 'datetime'  # хз зачем, но докину
+    UNDEFINED = 'undefined'
 
 
 class DocumentsApp(Base):
@@ -37,7 +39,7 @@ class DocumentFields(Base):
     id: Mapped[intpk]
     document_id: Mapped[int] = mapped_column(ForeignKey("public.documents.id", ondelete='CASCADE'), nullable=False)
     field_name: Mapped[str]
-    field_type: Mapped[FieldType] = mapped_column(Enum(FieldType), nullable=False, default=FieldType.STRING)
+    field_type: Mapped[FieldType] = mapped_column(PgEnum(FieldType, name='document_fields_type_enum', create_constraint=True, create_type=False), nullable=False, default=FieldType.STRING)
     field_description: Mapped[str | None]
     field_example: Mapped[str | None]
     service_field: Mapped[str]  # поле в самом документе для замены
