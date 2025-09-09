@@ -1,5 +1,16 @@
 
 class Constants:
+
+    # === APP ===
+    APP_NAME = 'Control case'
+    APP_COMPANY_NAME = 'control_case_back_base'
+    APP_VERSION = '1.0.0'
+    APP_DESCRIPTION = 'Control Case Back Base'
+    APP_AUTHOR = 'Control Case'
+    APP_AUTHOR_EMAIL = 'info@controlcase.ru'
+    
+
+    # === DATABASE ===
     DB_DRIVER: str
     DB_USER: str
     DB_PASSWORD: str
@@ -44,6 +55,10 @@ class Constants:
     @property
     def url_connection(self):
         return f"{self.DB_DRIVER}://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def company_name(self):
+        return self.APP_COMPANY_NAME
 
 
 DEV_CONSTANT = Constants()
