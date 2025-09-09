@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class TypeUpdSchedule(str, Enum):
-    EACH_PAYMENT = 'each payment'  # С каждого платежа убирать
-    ONE_PAYMENT = 'one payment'  # С одного платежа
+    EACH_PAYMENT = 'each_payment'  # С каждого платежа убирать
+    ONE_PAYMENT = 'one_payment'  # С одного платежа
 
 
 class AppSettings(BaseModel):
@@ -16,3 +16,4 @@ class AppSettings(BaseModel):
                                                            'автоматическом режиме. Сверх снять с каждого платежа в '
                                                            'графике или только с последнего?',
                                                default=TypeUpdSchedule.EACH_PAYMENT)
+

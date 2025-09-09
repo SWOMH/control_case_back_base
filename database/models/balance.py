@@ -2,8 +2,9 @@ from datetime import datetime
 from decimal import Decimal
 import enum
 from sqlalchemy import (
-    Integer, String, DateTime, Numeric, ForeignKey, Text, Enum, JSON, Index
+    Integer, String, DateTime, Numeric, ForeignKey, Text, Enum, JSON, Index, event
 )
+import uuid
 from database.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.types import intpk
@@ -82,13 +83,56 @@ class BalanceOperation(Base):
 
     operation_type = relationship("OperationType")
     user = relationship("User", back_populates="balance_operations")
+    payment_request = relationship("PaymentRequest", back_populates="operation")
 
 
-# Индексы
+# === Индексы ===
 Index("ix_balance_operation_user_id_created_at", BalanceOperation.user_id, BalanceOperation.created_at)
 Index("ix_balance_operation_external_id", BalanceOperation.external_id)
 Index("ix_user_balance_user_id", UserBalance.user_id, unique=True)
 
+
+# === Запрос на оплату ===
+class PaymentRequest(Base):
+    __tablename__ = "payments_requests"
+
+    id: Mapped[intpk] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("public.users.id", ondelete="CASCADE"), nullable=False)
+
+    # orderId будет уникальным бизнес-ключом (для банка)
+    orderId: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    status: Mapped[TransactionStatus] = mapped_column(
+        Enum(TransactionStatus), nullable=False, default=TransactionStatus.PENDING
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+    # внешние данные от банка
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    form_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # связь на пользователя и операцию
+    user = relationship("User", back_populates="payment_requests")
+    operation = relationship("BalanceOperation", back_populates="payment_request", uselist=False)
+
+
+Index("ix_payment_request_user_id", PaymentRequest.user_id)
+Index("ix_payment_request_orderId", PaymentRequest.orderId)
+Index("ix_payment_request_status", PaymentRequest.status)
+Index("ix_payment_request_created_at", PaymentRequest.created_at)
+
+
+@event.listens_for(PaymentRequest, "after_insert")
+def generate_order_id(mapper, connection, target: PaymentRequest):
+    order_id = f"ORD-{target.id:08d}"  # например ORD-00000042
+    connection.execute(
+        PaymentRequest.__table__.update()
+        .where(PaymentRequest.id == target.id)
+        .values(orderId=order_id)
+    )
 
 # === Логика, чтобы не забыть ===
 # Всегда делать операцию в транзакции:

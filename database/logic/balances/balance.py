@@ -21,4 +21,4 @@ class BalanceMain(DataBaseMainConnect):
         return balance_data
 
     # @connection(isolation_level='SERIALIZABLE')
-    # async def replenishment(self, ):
+    # async def replenishment_acquiring(self, ):

@@ -77,3 +77,15 @@ class BalanceOperationUpdate(BaseModel):
     balance_after: Optional[Decimal] = Field(None, description='Баланс после операции')
     note: Optional[str] = Field(None, description='Примечание')
     metadata_json: Optional[Dict[str, Any]] = Field(None, description='Метаданные в формате JSON')
+
+class PaymentRequestBase(BaseModel):
+    orderId: str = Field(..., description='ID заказа')
+    amount: Decimal = Field(..., description='Сумма платежа')
+    status: TransactionStatus = Field(TransactionStatus.PENDING, description='Статус платежа')
+    external_id: Optional[str] = Field(None, description='Внешний ID платежа')
+    form_url: Optional[str] = Field(None, description='URL формы')
+
+
+class AlphaAcquiringRequest(BaseModel):
+    orderId: str = Field(..., description='ID заказа')
+    formUrl: str = Field(..., description='URL формы')
