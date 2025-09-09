@@ -50,7 +50,7 @@ def require_permission(permission: str):
     ) -> Users:
         return await check_permission(permission, current_user)
 
-    return Depends(permission_checker)
+    return permission_checker
 
 
 async def check_admin_or_permission(
@@ -73,7 +73,7 @@ def require_admin_or_permission(permission: str):
     ) -> Users:
         return await check_admin_or_permission(permission, current_user)
 
-    return Depends(admin_or_permission_checker)
+    return admin_or_permission_checker
 
 
 async def is_admin(current_user: Users = Depends(get_current_active_user)) -> Users:
@@ -88,4 +88,4 @@ async def is_admin(current_user: Users = Depends(get_current_active_user)) -> Us
 
 def require_admin():
     """Декоратор для проверки прав администратора"""
-    return Depends(is_admin)
+    return is_admin
