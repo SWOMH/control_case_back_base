@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from schemas.admin_schemas import Permissions
 from database.models.users import Users
 from exceptions.database_exc.news import NewsIsEmpty
-from schemas.news_schema import NewsResponse, NewsCreate, NewsUpdate
+from schemas.news_schema import NewsModeratedSchema, NewsResponse, NewsCreate, NewsUpdate
 from database.logic.news.news import db_news
 from utils.permissions import require_admin_or_permission
 
@@ -96,6 +96,27 @@ async def delete_news(
                 detail="Post not found"
             )
         return {"message": "Post deleted successfully"}
+    except SQLAlchemyError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
+    
+@router.post('/{news_id}/moderated', status_code=status.HTTP_200_OK)
+async def moderated_post(
+        news_id: int,
+        post_data: NewsModeratedSchema,        
+        user: Users = Depends(require_admin_or_permission(Permissions.MODERATED_NEWS))
+):
+    """Модерация поста"""
+    try:
+        success = await db_news.moderated_post(news_id, post_data)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found"
+            )
+        return {"message": "Post moderated successfully"}
     except SQLAlchemyError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
