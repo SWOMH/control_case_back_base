@@ -46,6 +46,7 @@ class Permissions:
     CREATE_NEWS = 'create_news'
     UPDATE_NEWS = 'update_news'
     DELETE_NEWS = 'delete_news'
+    MODERATED_NEWS = 'moderated_news'
 
     # Управление пользователями
     CREATE_USER = "create_user"

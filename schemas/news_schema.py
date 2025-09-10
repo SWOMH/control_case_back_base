@@ -53,6 +53,11 @@ class NewsResponseAdmin(BaseModel):
     class Config:
         from_attributes = True
 
+class NewsModeratedSchema(BaseModel):    
+    moderated: bool
+    time_published: Optional[datetime]
+    published: bool
+
 # class NewsResponse(BaseModel):
 #     id: int
 #     title: str
