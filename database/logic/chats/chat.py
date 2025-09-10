@@ -144,5 +144,69 @@ class ChatSupport(DataBaseMainConnect):
         res = await session.execute(q)
         return res.scalars().all()
 
+    @connection
+    async def get_chat_by_id(self, session: AsyncSession, chat_id: int) -> Optional[Chat]:
+        """Получение чата по ID"""
+        q = select(Chat).where(Chat.id == chat_id)
+        res = await session.execute(q)
+        return res.scalars().first()
+
+    @connection
+    async def update_chat_operator(self, session: AsyncSession, chat_id: int, operator_id: int):
+        """Обновление оператора чата"""
+        q = update(Chat).where(Chat.id == chat_id).values(user_support_id=operator_id)
+        await session.execute(q)
+        await session.commit()
+
+    @connection
+    async def add_chat_participant(self, session: AsyncSession, chat_id: int, user_id: int, role: str) -> ChatParticipant:
+        """Добавление участника в чат"""
+        participant = ChatParticipant(chat_id=chat_id, user_id=user_id, role=role)
+        session.add(participant)
+        await session.commit()
+        await session.refresh(participant)
+        return participant
+
+    @connection
+    async def mark_chat_participant_left(self, session: AsyncSession, chat_id: int, user_id: int):
+        """Отметка ухода участника из чата"""
+        q = update(ChatParticipant).where(
+            ChatParticipant.chat_id == chat_id,
+            ChatParticipant.user_id == user_id,
+            ChatParticipant.left_at.is_(None)
+        ).values(left_at=datetime.utcnow())
+        await session.execute(q)
+        await session.commit()
+
+    @connection
+    async def get_active_lawyer_chat(self, session: AsyncSession, client_id: int, lawyer_id: int) -> Optional[Chat]:
+        """Получение активного чата клиента с юристом"""
+        q = select(Chat).where(
+            Chat.user_id == client_id,
+            Chat.user_support_id == lawyer_id,
+            Chat.active == True
+        )
+        res = await session.execute(q)
+        return res.scalars().first()
+
+    @connection
+    async def create_lawyer_assignment(self, session: AsyncSession, client_id: int, lawyer_id: int) -> ClientLawyerAssignment:
+        """Создание назначения юриста клиенту"""
+        assignment = ClientLawyerAssignment(client_id=client_id, lawyer_id=lawyer_id)
+        session.add(assignment)
+        await session.commit()
+        await session.refresh(assignment)
+        return assignment
+
+    @connection
+    async def get_active_lawyer_assignment(self, session: AsyncSession, client_id: int) -> Optional[ClientLawyerAssignment]:
+        """Получение активного назначения юриста для клиента"""
+        q = select(ClientLawyerAssignment).where(
+            ClientLawyerAssignment.client_id == client_id,
+            ClientLawyerAssignment.unassigned_at.is_(None)
+        )
+        res = await session.execute(q)
+        return res.scalars().first()
+
 
 chat_db = ChatSupport()
