@@ -9,8 +9,8 @@ import os
 
 
 @celery_app.task
-def send_confirmation_email(to_email: str, code: int) -> None:
-    confirmation_code = code
+def send_confirmation_email(to_email: str, confirmation_code: int) -> None:
+    # confirmation_code = code
     basedir = os.path.abspath(os.path.dirname(__file__))
     templates_dir = os.path.join(basedir, 'templates')  # папка с шаблонами
 

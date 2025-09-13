@@ -6,10 +6,18 @@ from endpoints.news.news import router as news_router
 from endpoints.stages.stage import router as stage_router
 from endpoints.payments_schedule.schedule import router as schedule_router
 from endpoints.payments_schedule.schedule_admin import router as schedule_admin_router
+from utils.chat_system_init import startup_chat_system, shutdown_chat_system
+from contextlib import asynccontextmanager
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await startup_chat_system()  # Запуск
+    yield
+    await shutdown_chat_system()  # Остановка
 
-app = FastAPI()
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.middleware("http")

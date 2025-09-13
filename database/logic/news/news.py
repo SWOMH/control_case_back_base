@@ -9,7 +9,8 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.news_feed import Post, Like, Comment
 from exceptions.database_exc.news import NewsIsEmpty
-from schemas.news_schema import NewsCreate, NewsUpdate
+from schemas.news_schema import NewsCreate, NewsModeratedSchema, NewsUpdate
+from config.settings import settings
 
 
 class NewsDataBase(DataBaseMainConnect):
@@ -95,7 +96,7 @@ class NewsDataBase(DataBaseMainConnect):
         post = Post(
             **post_dict,
             author_id=author_id,  # Используем author_id из параметра
-            moderated=False  # По умолчанию пост не модерирован
+            moderated=False if settings.default_publish_news else True  # По умолчанию пост не модерирован
         )
 
         session.add(post)
@@ -178,6 +179,20 @@ class NewsDataBase(DataBaseMainConnect):
 
         await session.delete(post)
         await session.commit()
+        return True
+    
+    @connection
+    async def moderated_post(self, news_id: int, post_data: NewsModeratedSchema, session: AsyncSession) -> bool:
+        """Для модерации поста"""
+        post = await self.get_news_by_id(news_id, session)
+        if not post:
+            return False
+        # хз, сработает или нет
+        for field, value in post_data.dict(exclude_unset=True).items():
+            setattr(post, field, value)
+        
+        await session.commit()
+        await session.refresh(post)
         return True
 
     @connection

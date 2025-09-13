@@ -16,4 +16,8 @@ class AppSettings(BaseModel):
                                                            'автоматическом режиме. Сверх снять с каждого платежа в '
                                                            'графике или только с последнего?',
                                                default=TypeUpdSchedule.EACH_PAYMENT)
+    
+    default_publish_news: bool = Field(description='По умолчанию публиковать новости? (True - публиковать сразу, ' 
+                                       'False - публиковать только после проверки модератором)',
+                                       default=True)
 
