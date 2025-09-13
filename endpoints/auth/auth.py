@@ -59,8 +59,8 @@ async def send_message_confirmed(user_id: int):
     """
     code = random.randint(1000, 9999)
     user_email = await db_auth.get_user_by_id(user_id)
+    redis_db.set(f'{user_id}_code_confirmed', f'{code}', 300)
     send_confirmation_email.delay(user_email, code) # Тута отправляем сообщение
-    redis_db.set(f'{user_id}', f'{code}', 300)
     return {"message": "message send"}
 
 
@@ -70,7 +70,7 @@ async def message_confirmed(user_id: int, code: int):
     Метод подтверждения регистрации
     Сравнивает коды и в случае совпадения делает аккаунт активированным
     """
-    code_r = redis_db.get(f'{user_id}')
+    code_r = redis_db.get(f'{user_id}_code_confirmed')
     if code == code_r:
         await db_auth.activate_user(user_id)
         return status.HTTP_200_OK

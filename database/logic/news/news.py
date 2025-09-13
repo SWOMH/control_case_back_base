@@ -180,6 +180,40 @@ class NewsDataBase(DataBaseMainConnect):
         await session.commit()
         return True
 
+    @connection
+    async def like_unlike_news(
+            self,
+            news_id: int,
+            user_id: int,
+            session: AsyncSession
+    ) -> bool:
+        """Лайк поста"""
+        post = await self.get_news_by_id(news_id, session)
+        if not post:
+            return False
+
+        like = await session.execute(
+            select(Like).where(
+                Like.post_id == news_id,
+                Like.user_id == user_id
+            )
+        )
+        like = like.scalar_one_or_none()
+        if like:
+            await session.delete(like)
+            await session.flush()
+            await session.refresh(post)
+            return True
+        else:
+            like = Like(
+                post_id=news_id,
+                user_id=user_id
+            )
+            session.add(like)
+        await session.flush()
+        await session.refresh(post)
+        return True
+
 
 
 db_news = NewsDataBase()
