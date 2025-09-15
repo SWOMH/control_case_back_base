@@ -1,5 +1,5 @@
 from database.core import DatabaseCore
-from constants import DEV_CONSTANT
+from config.constants import DEV_CONSTANT
 
 
 class DataBaseMainConnect(DatabaseCore):

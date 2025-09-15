@@ -21,3 +21,5 @@ class AppSettings(BaseModel):
                                        'False - публиковать только после проверки модератором)',
                                        default=True)
 
+
+settings = AppSettings()

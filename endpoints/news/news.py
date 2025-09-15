@@ -6,6 +6,7 @@ from database.models.users import Users
 from exceptions.database_exc.news import NewsIsEmpty
 from schemas.news_schema import NewsModeratedSchema, NewsResponse, NewsCreate, NewsUpdate
 from database.logic.news.news import db_news
+from utils.auth import get_current_user
 from utils.permissions import require_admin_or_permission
 
 router = APIRouter(prefix='/news', tags=['Новости'])
@@ -147,7 +148,8 @@ async def hard_delete_news(
 
 @router.get('/{news_id}', response_model=NewsResponse)
 async def get_news_by_id(
-        news_id: int
+        news_id: int,
+        user: Users = Depends(get_current_user)
 ) -> NewsResponse:
     """Получение поста по ID"""
     try:
@@ -163,7 +165,7 @@ async def get_news_by_id(
 @router.post('/like/{news_id}', status_code=status.HTTP_200_OK)
 async def like_unlike_news(
         news_id: int,
-        user: Users = Depends(require_admin_or_permission(Permissions.LIKE_NEWS))
+        user: Users = Depends(get_current_user)
 ):
     """Лайк поста"""
     try:
