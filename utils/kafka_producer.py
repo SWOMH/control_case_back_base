@@ -249,5 +249,77 @@ class SupportChatKafkaProducer:
         await self._send_event(KafkaTopics.ADMIN_ACTIONS, event, key=f"chat_{chat_id}")
 
 
-# Глобальный экземпляр producer
-kafka_producer = SupportChatKafkaProducer()
+# Mock класс для работы без Kafka
+class MockSupportChatKafkaProducer:
+    """Mock Kafka Producer для режима без Kafka"""
+    
+    def __init__(self):
+        self._started = False
+    
+    async def start(self):
+        """Mock запуск producer"""
+        self._started = True
+        logger.info("Mock Kafka Producer запущен")
+    
+    async def stop(self):
+        """Mock остановка producer"""
+        self._started = False
+        logger.info("Mock Kafka Producer остановлен")
+    
+    async def _send_event(self, topic: str, event: BaseKafkaEvent, key: Optional[str] = None):
+        """Mock отправка события"""
+        logger.debug(f"Mock: Событие {event.event_type} для топика {topic}")
+    
+    # Mock методы для всех событий чата
+    async def send_chat_created(self, chat_id: int, user_id: int, metadata: Optional[Dict] = None):
+        logger.debug(f"Mock: Чат {chat_id} создан для пользователя {user_id}")
+    
+    async def send_message_sent(self, chat_id: int, sender_id: int, sender_type: str, 
+                               message_id: int, message_text: Optional[str] = None):
+        logger.debug(f"Mock: Сообщение {message_id} отправлено в чат {chat_id}")
+    
+    async def send_operator_joined(self, chat_id: int, operator_id: int, operator_type: str):
+        logger.debug(f"Mock: Оператор {operator_id} присоединился к чату {chat_id}")
+    
+    async def send_chat_closed(self, chat_id: int, closed_by_user_id: int, reason: Optional[str] = None):
+        logger.debug(f"Mock: Чат {chat_id} закрыт пользователем {closed_by_user_id}")
+    
+    async def send_client_waiting(self, client_id: int, priority: int = 0, metadata: Optional[Dict] = None):
+        logger.debug(f"Mock: Клиент {client_id} ожидает в очереди")
+    
+    async def send_client_request_removed(self, client_id: int, operator_id: int, chat_id: int):
+        logger.debug(f"Mock: Запрос клиента {client_id} удален из очереди")
+    
+    async def send_operator_online(self, operator_id: int, operator_type: str, max_concurrent_chats: int = 5):
+        logger.debug(f"Mock: Оператор {operator_id} онлайн")
+    
+    async def send_operator_offline(self, operator_id: int, operator_type: str):
+        logger.debug(f"Mock: Оператор {operator_id} оффлайн")
+    
+    async def send_operator_accept_chat(self, operator_id: int, operator_type: str, chat_id: int, client_id: int):
+        logger.debug(f"Mock: Оператор {operator_id} принял чат {chat_id}")
+    
+    async def send_chat_assigned(self, chat_id: int, operator_id: int, operator_type: str, 
+                                client_id: int, assignment_reason: Optional[str] = None):
+        logger.debug(f"Mock: Чат {chat_id} назначен оператору {operator_id}")
+    
+    async def send_chat_transferred(self, chat_id: int, new_operator_id: int, new_operator_type: str,
+                                   previous_operator_id: int, client_id: int, reason: Optional[str] = None):
+        logger.debug(f"Mock: Чат {chat_id} переведен на оператора {new_operator_id}")
+    
+    async def send_lawyer_assigned(self, client_id: int, lawyer_id: int, chat_id: int):
+        logger.debug(f"Mock: Юрист {lawyer_id} назначен клиенту {client_id}")
+    
+    async def send_force_transfer(self, admin_id: int, chat_id: int, target_operator_id: int, 
+                                 source_operator_id: int, reason: str):
+        logger.debug(f"Mock: Принудительный перевод чата {chat_id} админом {admin_id}")
+
+
+# Выбор реализации в зависимости от конфигурации
+from config.kafka_config import KAFKA_ENABLED
+
+if KAFKA_ENABLED:
+    kafka_producer = SupportChatKafkaProducer()
+else:
+    kafka_producer = MockSupportChatKafkaProducer()
+    logger.info("Используется Mock Kafka Producer (Kafka отключен)")

@@ -10,7 +10,7 @@ from utils.kafka_consumer import kafka_consumer, SupportChatEventHandlers
 from utils.queue_manager import queue_manager
 from utils.assignment_manager import create_assignment_manager
 from utils.websocket_manager import websocket_manager
-from config.kafka_config import KafkaTopics, ChatEventType, SupportQueueEventType, OperatorEventType, AssignmentEventType, AdminActionType
+from config.kafka_config import KafkaTopics, ChatEventType, SupportQueueEventType, OperatorEventType, AssignmentEventType, AdminActionType, KAFKA_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,12 @@ class SupportChatSystem:
         try:
             logger.info("Начало инициализации системы чата поддержки...")
             
-            # 1. Запускаем Kafka Producer
+            if KAFKA_ENABLED:
+                logger.info("Kafka включен - запуск полной системы")
+            else:
+                logger.info("Kafka отключен - запуск в mock-режиме")
+            
+            # 1. Запускаем Kafka Producer (или mock)
             await kafka_producer.start()
             logger.info("Kafka Producer запущен")
             
@@ -51,16 +56,17 @@ class SupportChatSystem:
                 self.assignment_manager
             )
             
-            # 5. Регистрируем обработчики событий в Kafka Consumer
+            # 5. Регистрируем обработчики событий в Kafka Consumer (или mock)
             self._register_event_handlers()
             logger.info("Обработчики событий зарегистрированы")
             
-            # 6. Запускаем Kafka Consumer
+            # 6. Запускаем Kafka Consumer (или mock)
             await kafka_consumer.start()
             logger.info("Kafka Consumer запущен")
             
             self.started = True
-            logger.info("Система чата поддержки успешно инициализирована")
+            mode = "с Kafka" if KAFKA_ENABLED else "в mock-режиме (без Kafka)"
+            logger.info(f"Система чата поддержки успешно инициализирована {mode}")
             
         except Exception as e:
             logger.error(f"Ошибка инициализации системы чата: {e}")
@@ -182,6 +188,8 @@ class SupportChatSystem:
         
         return {
             "status": "running",
+            "kafka_enabled": KAFKA_ENABLED,
+            "mode": "production" if KAFKA_ENABLED else "mock",
             "queue_manager": {
                 "running": queue_manager._running,
                 "operators_count": len(queue_manager.operators),
@@ -189,6 +197,7 @@ class SupportChatSystem:
                 "active_chats": len(queue_manager.chat_assignments)
             },
             "kafka": {
+                "enabled": KAFKA_ENABLED,
                 "producer_started": kafka_producer._started,
                 "consumer_started": kafka_consumer._started
             },

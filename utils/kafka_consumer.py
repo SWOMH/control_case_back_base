@@ -308,5 +308,37 @@ class SupportChatEventHandlers:
         )
 
 
-# Глобальный экземпляр consumer
-kafka_consumer = SupportChatKafkaConsumer()
+# Mock класс для работы без Kafka
+class MockSupportChatKafkaConsumer:
+    """Mock Kafka Consumer для режима без Kafka"""
+    
+    def __init__(self):
+        self.handlers = {}
+        self._started = False
+    
+    def register_handler(self, topic: str, event_type: str, handler):
+        """Mock регистрация обработчика"""
+        if topic not in self.handlers:
+            self.handlers[topic] = {}
+        self.handlers[topic][event_type] = handler
+        logger.debug(f"Mock: Зарегистрирован обработчик для {topic}:{event_type}")
+    
+    async def start(self):
+        """Mock запуск consumer"""
+        self._started = True
+        logger.info("Mock Kafka Consumer запущен")
+    
+    async def stop(self):
+        """Mock остановка consumer"""
+        self._started = False
+        logger.info("Mock Kafka Consumer остановлен")
+
+
+# Выбор реализации в зависимости от конфигурации
+from config.kafka_config import KAFKA_ENABLED
+
+if KAFKA_ENABLED:
+    kafka_consumer = SupportChatKafkaConsumer()
+else:
+    kafka_consumer = MockSupportChatKafkaConsumer()
+    logger.info("Используется Mock Kafka Consumer (Kafka отключен)")

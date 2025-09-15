@@ -1,6 +1,7 @@
 """
 Конфигурация Kafka для чата поддержки
 """
+import os
 from enum import Enum
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
@@ -138,6 +139,8 @@ class AdminActionEvent(BaseKafkaEvent):
 
 
 # Конфигурация Kafka
+KAFKA_ENABLED = os.getenv('KAFKA_ENABLED', 'false').lower() == 'true'
+
 KAFKA_CONFIG = {
     'bootstrap_servers': ['localhost:9092'],
     'client_id': 'support_chat_service',
