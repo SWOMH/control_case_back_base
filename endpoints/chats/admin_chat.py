@@ -13,7 +13,7 @@ from utils.websocket_manager import websocket_manager
 from database.logic.chats.chat import chat_db
 from database.models.users import Users
 
-router = APIRouter()
+router = APIRouter(prefix='/admin/chat', tags=['Админ чат'])
 
 # Создаем менеджер назначений
 assignment_manager = create_assignment_manager(queue_manager, websocket_manager)

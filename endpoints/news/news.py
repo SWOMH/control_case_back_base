@@ -18,7 +18,7 @@ async def get_news() -> list[NewsResponse]:
     Получение новостей (Только те что прошли модерацию(в зависимости от конфига))
     """
     try:
-        news = await db_news.get_news_modeled()
+        news = db_news.get_news_modeled()
     except NewsIsEmpty as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -26,15 +26,15 @@ async def get_news() -> list[NewsResponse]:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    response = [
-        NewsResponse(
-            **post.__dict__,
-            like_count=like_count,
-            comment_count=comment_count
-        )
-        for post, like_count, comment_count in news
-    ]
-    return response
+    # response = [
+    #     NewsResponse(
+    #         **post.__dict__,
+    #         like_count=like_count,
+    #         comment_count=comment_count
+    #     )
+    #     for post, like_count, comment_count in news
+    # ]
+    return NewsResponse.model_validate(news)
 
 
 @router.post('/create', response_model=NewsResponse, status_code=status.HTTP_201_CREATED)

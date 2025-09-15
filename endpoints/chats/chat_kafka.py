@@ -17,7 +17,7 @@ from database.logic.chats.chat import chat_db
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix='/chat', tags=['Чат'])
 
 # Создаем менеджер назначений
 assignment_manager = create_assignment_manager(queue_manager, websocket_manager)

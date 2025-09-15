@@ -15,7 +15,7 @@ import uuid
 from docx2pdf import convert
 
 
-router = APIRouter(prefix="/docs", tags=["Документы"])
+router = APIRouter(prefix="/document", tags=["Документы"])
 
 @router.get('', response_model=list[DocumentSchemaResponse], status_code=status.HTTP_200_OK)
 async def get_all_documents(current_user: Users = Depends(get_current_active_user)) -> list[DocumentSchemaResponse] | dict[str, str]:
