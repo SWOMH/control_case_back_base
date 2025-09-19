@@ -8,14 +8,14 @@ from config.constants import DEV_CONSTANT
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.news_feed import Post, Like, Comment
-from exceptions.database_exc.news import NewsIsEmpty
+from exceptions.database_exc.news import NewsIsEmptyException
 from schemas.news_schema import NewsCreate, NewsModeratedSchema, NewsUpdate
 from config.settings import settings
 
 
 class NewsDataBase(DataBaseMainConnect):
 
-    @connection
+    @connection()
     async def get_news_modeled(self, session: AsyncSession):
         """
         Получение новостей которые уже промоделировали и готовы к публекации
@@ -74,9 +74,20 @@ class NewsDataBase(DataBaseMainConnect):
             )
 
         result = await session.execute(stmt)
-        if len(result) == 0:
+        rows = result.all()
+        if not rows:
             raise NewsIsEmpty
-        return result.all()
+        return rows
+
+    @connection()
+    async def get_news_test(self, session: AsyncSession):
+        """Тестовый запрос"""
+        stmt = select(Post).where(Post.id == 1)
+        result = await session.execute(stmt)
+        rows = result.all()
+        if not rows:
+            raise NewsIsEmptyException
+        return result.scalar_one_or_none()
 
     @connection
     async def create_news(
