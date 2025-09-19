@@ -52,7 +52,7 @@ class UserBalance(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
     # связь к юзеру (если нужна)
-    user = relationship("User", back_populates="balance")  # при наличии модели User
+    # user = relationship("User", back_populates="balance")  # при наличии модели User
 
 
 # === Журнал операций (ledger) ===
@@ -83,7 +83,7 @@ class BalanceOperation(Base):
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # JSON — полезно хранить необязательные данные от платежного шлюза (raw payload).
 
     operation_type = relationship("OperationType")
-    user = relationship("User", back_populates="balance_operations")
+    # user = relationship("User", back_populates="balance_operations")
     payment_request = relationship("PaymentRequest", back_populates="operation")
 
 
@@ -116,7 +116,7 @@ class PaymentRequest(Base):
     form_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # связь на пользователя и операцию
-    user = relationship("User", back_populates="payment_requests")
+    # user = relationship("User", back_populates="payment_requests")
     operation = relationship("BalanceOperation", back_populates="payment_request", uselist=False)
 
 

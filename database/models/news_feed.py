@@ -4,7 +4,7 @@ from database.base import Base
 from decimal import Decimal
 from datetime import datetime
 from sqlalchemy import Date, DateTime, ForeignKey, Numeric, Text, text, func, String, Boolean, Integer, Index, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 from database.types import intpk, u_id
 
 # TODO: Нужно будет заготовить файлы под S3
@@ -35,7 +35,7 @@ class Post(Base):
     author_id: Mapped[u_id] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="SET NULL"), nullable=True)
 
     # связи
-    author = relationship("Users", backref="posts")  # если модель Users в проекте называется Users
+    # author = relationship("Users", backref="posts")  # если модель Users в проекте называется Users
     comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
     likes = relationship("Like", back_populates="post", cascade="all, delete-orphan")
 
@@ -58,7 +58,7 @@ class Like(Base):
     post_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.posts.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    user = relationship("Users", backref="likes")
+    # user = relationship("Users", backref="likes")
     post = relationship("Post", back_populates="likes")
 
 
@@ -77,9 +77,13 @@ class Comment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     edited_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, onupdate=func.now())
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)  # soft-delete
-
-    user = relationship("Users", backref="comments")
+    user_reply_id: Mapped[Optional[u_id]] = mapped_column(Integer, ForeignKey("public.users.id", ondelete="SET NULL"), nullable=True)
+    # user = relationship("Users", backref="comments")
     post = relationship("Post", back_populates="comments")
-    replies = relationship("Comment", backref=relationship("parent", remote_side=[id]), cascade="all, delete-orphan")
+    # parent = relationship(
+    #     "Comment",
+    #     remote_side=[id],
+    #     backref=backref("replies", cascade="all, delete-orphan")
+    # )
 
 

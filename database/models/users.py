@@ -38,9 +38,10 @@ class Users(Base):
     timezone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     preferences: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
-    balance = relationship("UserBalance", back_populates='user')
+    # balance = relationship("UserBalance", back_populates='user')
     # history_balance = relationship("HistoryBalance", back_populates='user')
-    activity = relationship("Activity", back_populates="user")
+    # tokens = relationship("Token", back_populates="user")
+    # activity = relationship("Activity", back_populates="user")
     groups = relationship("Group", secondary="user_group_association", back_populates="users")
 
 
@@ -58,7 +59,7 @@ class Token(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey('public.users.id', ondelete='CASCADE'), nullable=False)
     token: Mapped[str] = mapped_column(nullable=False)
     refresh_token: Mapped[str | None] = mapped_column(nullable=True)
-    user = relationship("Users", back_populates="tokens")
+    # user = relationship("Users", back_populates="tokens")
 
 
 user_group_association = Table(
@@ -89,7 +90,7 @@ class Activity(Base):
     extra: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
-    user = relationship("Users", back_populates="activity")
+    # user = relationship("Users", back_populates="activity")
     
 
 

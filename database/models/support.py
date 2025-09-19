@@ -85,9 +85,9 @@ class Chat(Base):
     resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     date_close: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # связи
-    messages = relationship("ChatMessage", back_populates="chats", cascade="all, delete-orphan")
-    participants = relationship("ChatParticipant", back_populates="chats", cascade="all, delete-orphan")
-    rating = relationship("ChatRating", back_populates="chats", uselist=False)
+    messages = relationship("ChatMessage", back_populates="chat", cascade="all, delete-orphan")
+    participants = relationship("ChatParticipant", back_populates="chat", cascade="all, delete-orphan")
+    rating = relationship("ChatRating", back_populates="chat", uselist=False)
 
 
 class ChatMessage(Base):
@@ -103,6 +103,10 @@ class ChatMessage(Base):
         Можно быстро сортировать по времени (есть индекс).
     """
     __tablename__ = "chat_messages"
+    __table_args__ = (
+        Index('ix_chat_messages_chat_id_created_at', 'chat_id', desc('created_at')),
+        {'schema': 'public'}
+    )
     id: Mapped[intpk]
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id", ondelete="CASCADE"), nullable=False)
     sender_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=True)
@@ -116,10 +120,6 @@ class ChatMessage(Base):
     attachments = relationship("ChatAttachment", back_populates="message", cascade="all, delete-orphan")
     read_receipts = relationship("MessageReadReceipt", back_populates="message", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        Index('ix_chat_messages_chat_id_created_at', 'chat_id', desc('created_at')),
-    )
-
 
 class ChatAttachment(Base):
     """
@@ -131,8 +131,9 @@ class ChatAttachment(Base):
         Через relationship легко получить вложения для сообщения.
     """
     __tablename__ = "chat_attachment"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat_messages.id", ondelete="CASCADE"), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1024), nullable=False)  # или хранить URL
     content_type: Mapped[str] = mapped_column(String(128), nullable=True)
@@ -150,8 +151,9 @@ class MessageReadReceipt(Base):
         Создаётся при открытии чата пользователем или оператором.
     """
     __tablename__ = "message_read_receipt"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chat_messages.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
     read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     message = relationship("ChatMessage", back_populates="read_receipts")
@@ -167,6 +169,7 @@ class ChatParticipant(Base):
         Можно фильтровать чаты по роли участников.
     """
     __tablename__ = "chat_participant"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
@@ -174,6 +177,7 @@ class ChatParticipant(Base):
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     left_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     chat = relationship("Chat", back_populates="participants")
+
 
 
 
@@ -186,6 +190,7 @@ class SupportHistoryChat(Base):
         Создаётся при передаче чата другому юристу или закрытии.
     """
     __tablename__ = "support_history_chat"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id"), nullable=False)
     old_support_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
@@ -204,6 +209,7 @@ class ClientLawyerAssignment(Base):
         Можно строить аналитику: сколько клиентов у юриста.
     """
     __tablename__ = "client_lawyer_assignment"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     client_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
     lawyer_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.users.id"), nullable=False)
@@ -222,6 +228,7 @@ class ChatRating(Base):
         Через relationship можно сразу получить рейтинг из чата.
     """
     __tablename__ = "chat_rating"
+    __table_args__ = {'schema': 'public'}
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("public.chats.id", ondelete="CASCADE"), nullable=False, unique=True)
     rating: Mapped[int] = mapped_column(Integer, nullable=False)  # например 1-5
