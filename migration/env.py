@@ -17,7 +17,8 @@ from database.models.documents_app import *
 from database.models.notifications import *
 from database.models.agreement import *
 from database.models.schedule import *
-from constants import DEV_CONSTANT
+from database.models.news_feed import *
+from config.constants import DEV_CONSTANT
 from database.base import Base
 
 config = context.config
