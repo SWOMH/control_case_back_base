@@ -76,7 +76,7 @@ class NewsDataBase(DataBaseMainConnect):
         result = await session.execute(stmt)
         rows = result.all()
         if not rows:
-            raise NewsIsEmpty
+            raise NewsIsEmptyException
         return rows
 
     @connection()

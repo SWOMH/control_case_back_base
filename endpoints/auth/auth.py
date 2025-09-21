@@ -26,7 +26,7 @@ router = APIRouter(prefix="/auth", tags=["Авторизация"])
 security = HTTPBearer()
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserRegister, status_code=status.HTTP_201_CREATED)
 async def register_user(
         user_data: UserRegister
 ) -> UserResponse:
