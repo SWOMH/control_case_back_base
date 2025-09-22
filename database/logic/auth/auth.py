@@ -16,7 +16,7 @@ from schemas.user_schema import UserRegister, UserUpdateRequest
 
 class AuthUsers(DataBaseMainConnect):
 
-    @connection
+    @connection()
     async def register_user(self, user_data: UserRegister, session: AsyncSession):
         """
         Регистрация пользователя
@@ -30,11 +30,11 @@ class AuthUsers(DataBaseMainConnect):
         stmt = select(Users).where(Users.email == user_data.login)
         result = await session.execute(stmt)
         existing_user = result.scalar_one_or_none()
-
-        if existing_user.account_confirmed:
-            raise UserAlreadyExistsException
-        if not existing_user.account_confirmed:
-            raise UserNotConfirmed
+        if existing_user:
+            if existing_user.account_confirmed:
+                raise UserAlreadyExistsException
+            if not existing_user.account_confirmed:
+                raise UserNotConfirmed
 
 
         # Хешируем пароль
@@ -55,10 +55,10 @@ class AuthUsers(DataBaseMainConnect):
         await session.refresh(new_user)
         return new_user
 
-    @connection
-    async def authenticate_user(self, email: str, password: str, session: AsyncSession) -> Optional[Users]:
+    @connection()
+    async def authenticate_user(self, login: str, password: str, session: AsyncSession) -> Optional[Users]:
         """Аутентифицирует пользователя"""
-        stmt = select(Users).where(Users.email == email)
+        stmt = select(Users).where(Users.login == login)
         result = await session.execute(stmt)
         user = result.scalar_one_or_none()
 
@@ -70,7 +70,7 @@ class AuthUsers(DataBaseMainConnect):
 
         return user
 
-    @connection
+    @connection()
     async def save_token(self, user_id: int, access_token: str, refresh_token: str, session: AsyncSession):
         """Сохраняет токены в базе данных"""
         # Удаляем старые токены пользователя
@@ -90,7 +90,7 @@ class AuthUsers(DataBaseMainConnect):
         session.add(new_token)
         await session.commit()
 
-    @connection
+    @connection()
     async def user_verification_by_token(self, token_user_id: int, refresh_token: str, session: AsyncSession) -> Users:
         """
         Верификация пользователя по токену
@@ -119,13 +119,15 @@ class AuthUsers(DataBaseMainConnect):
 
         return user
 
-    @connection
+    @connection()
     async def user_get_by_token(self, token_user_id: int, session: AsyncSession) -> Users:
         """
         Поиск пользователя по токену
         """
         # Получаем пользователя
-        stmt = select(Users).options(selectinload(Users.balance), selectinload(Users.groups)).where(
+        # stmt = select(Users).options(selectinload(Users.balance), selectinload(Users.groups)).where(
+        #     Users.id == token_user_id)
+        stmt = select(Users).options(selectinload(Users.groups)).where(
             Users.id == token_user_id)
         result = await session.execute(stmt)
         user: Users = result.scalar_one_or_none()
@@ -138,7 +140,7 @@ class AuthUsers(DataBaseMainConnect):
 
         return user
 
-    @connection
+    @connection()
     async def logout_user(self, user_id: int, session: AsyncSession):
         # Удаляем все токены пользователя
         stmt = select(Token).where(Token.user_id == user_id)
@@ -214,7 +216,7 @@ class AuthUsers(DataBaseMainConnect):
     #
     #     return users, total_count
 
-    @connection
+    @connection()
     async def get_user_by_id(self, user_id: int, current_user: Users, session: AsyncSession) -> Users:
         """
         Получение пользователя по ID с проверкой доступа
@@ -239,7 +241,7 @@ class AuthUsers(DataBaseMainConnect):
 
         return user
 
-    @connection
+    @connection()
     async def update_user(self, user_id: int, user_data: UserUpdateRequest, current_user: Users,
                           session: AsyncSession) -> Users:
         """
@@ -282,7 +284,7 @@ class AuthUsers(DataBaseMainConnect):
         await session.refresh(user)
         return user
 
-    @connection
+    @connection()
     async def activate_user(self, user_id: int, session: AsyncSession):
         """
         Активирует пользователя
@@ -302,7 +304,7 @@ class AuthUsers(DataBaseMainConnect):
         await session.commit()
 
 
-    @connection
+    @connection()
     async def delete_user(self, user_id: int, current_user: Users, session: AsyncSession) -> bool:
         """
         Мягкое удаление пользователя (деактивация)

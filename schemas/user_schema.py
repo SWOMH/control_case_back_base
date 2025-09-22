@@ -70,35 +70,39 @@ class TokenData(BaseModel):
 class UserResponse(BaseModel):
     id: int
     login: str
-    email: Optional[EmailStr] = None
+    # email: Optional[EmailStr] = None
     surname: Optional[str] = None
     first_name: Optional[str] = None
     patronymic: Optional[str] = None
+    account_confirmed: bool
 
     is_client: bool = False
     is_active: bool = True
-    is_staff: bool = False
-    is_support: bool = False
     is_banned: bool = False
-    is_lawyer: bool = False
+    # is_staff: bool = False
+    # is_support: bool = False
+    # is_banned: bool = False
+    # is_lawyer: bool = False
 
-    last_activity: Optional[datetime] = None
-    last_login: Optional[datetime] = None
+    # last_activity: Optional[datetime] = None
+    # last_login: Optional[datetime] = None
     # created_at: datetime
     # updated_at: datetime
-    deleted_at: Optional[datetime] = None
+    # deleted_at: Optional[datetime] = None
 
-    locale: Optional[str] = None
-    timezone: Optional[str] = None
-    preferences: Optional[Dict] = None
+    # locale: Optional[str] = None
+    # timezone: Optional[str] = None
+    # preferences: Optional[Dict] = None
 
     # вложенные сущности
-    groups: List[GroupOut] = []
-    balance: Optional[UserBalanceOut] = None
+    # groups: List[GroupOut] = []
+    groups: Optional[list[str]] = Field(None, description="Группы пользователя")
+
+    # balance: Optional[UserBalanceOut] = None
     # court_stages: List[CourtStageOut] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserUpdateRequest(BaseModel):
     """
