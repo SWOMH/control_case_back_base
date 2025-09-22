@@ -18,22 +18,29 @@ from docx2pdf import convert
 router = APIRouter(prefix="/document", tags=["Документы"])
 
 @router.get('', response_model=list[DocumentSchemaResponse], status_code=status.HTTP_200_OK)
-async def get_all_documents(current_user: Users = Depends(get_current_active_user)) -> list[DocumentSchemaResponse] | dict[str, str]:
+async def get_all_documents() -> list[DocumentSchemaResponse] | dict[str, str]:
     try:
         documents = await db_documents.get_all_documents()
-    except DocumentNotFoundException:
-        return {'message': "documents is empty"}
+    except DocumentNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.detail,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return documents
 
 
 @router.get('/{document_id}', tags=["Документы"])
-async def get_document_by_id(document_id: int,
-                             current_user: Users = Depends(get_current_active_user)) -> DocumentSchemaResponse:
+async def get_document_by_id(document_id: int) -> DocumentSchemaResponse:
     try:
         document = await db_documents.get_document_by_id(document_id)
         return document
-    except:
-        ...
+    except DocumentNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.detail,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 @router.post('/generate', tags=['Документы'])
@@ -41,13 +48,13 @@ async def generate_document(document: DocumentGenerateDocSchema,
                             user: Users = Depends(get_current_active_user)):
     db_doc = await db_documents.get_document_by_id(document.id)
     if not db_doc:
-        raise HTTPException(status_code=404, detail="Документ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
     can_generate = await db_documents.check_user_can_generate(user, db_doc.price)
     if not can_generate:
-        raise HTTPException(status_code=423, detail="Insufficient funds")
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Insufficient funds")
     template_path = Path(db_doc.path)
     if not template_path.exists():
-        raise HTTPException(status_code=404, detail="Шаблон не найден на сервере")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Шаблон не найден на сервере")
 
     # словарь для замены
     context = {}
@@ -55,7 +62,7 @@ async def generate_document(document: DocumentGenerateDocSchema,
         # Находим описание поля из базы
         field_meta = next((f for f in db_doc.fields if f.id == field.id), None)
         if not field_meta:
-            raise HTTPException(status_code=400, detail=f"Поле с id={field.id} не найдено")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Поле с id={field.id} не найдено")
         context[field_meta.service_field] = field.value
 
     # Подставляем значения в docx

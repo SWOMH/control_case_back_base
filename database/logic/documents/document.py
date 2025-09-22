@@ -18,7 +18,7 @@ from datetime import date
 
 class DocumentDataBase(DataBaseMainConnect):
 
-    @connection
+    @connection()
     async def create_document(self, document: DocumentSchemaCreate, session: AsyncSession):
         try:
             # 1. Проверка существования документа с таким же именем
@@ -120,7 +120,7 @@ class DocumentDataBase(DataBaseMainConnect):
             raise e
 
 
-    @connection
+    @connection()
     async def check_user_can_generate(self, user: Users, document_price: float) -> bool:
         """Проверяет возможность создания документа (если документ платный)"""
 
@@ -130,7 +130,7 @@ class DocumentDataBase(DataBaseMainConnect):
         return False if user.balance < document_price else True
 
 
-    @connection
+    @connection()
     async def generate_document_created(self, document_id: int, user_id: int, session: AsyncSession):
         """Просто записывает какой человек создал документ и когда"""
         generate_doc = DocumentCreated(
@@ -143,7 +143,7 @@ class DocumentDataBase(DataBaseMainConnect):
         session.commit()
 
 
-    @connection
+    @connection()
     async def get_document_by_id(self, document_id: int, session: AsyncSession) -> DocumentSchemaResponse:
         """Получение документа по ID со всеми связанными данными"""
         stmt = select(DocumentsApp).where(
@@ -165,7 +165,7 @@ class DocumentDataBase(DataBaseMainConnect):
         return document
 
 
-    @connection
+    @connection()
     async def get_all_documents(self, session: AsyncSession, skip: int = 0, limit: int = 100):
         """Получение всех документов с пагинацией"""
         stmt = select(DocumentsApp).where(
@@ -177,11 +177,13 @@ class DocumentDataBase(DataBaseMainConnect):
 
         result = await session.execute(stmt)
         documents = result.scalars().all()
+        if not documents:
+            raise DocumentNotFoundException
         # return documents
         return [DocumentSchemaResponse.model_validate(d) for d in documents]
 
 
-    @connection
+    @connection()
     async def update_document(self, document_id: int, update_data: dict, session: AsyncSession):
         """Обновление документа"""
         document = await self.get_document_by_id(document_id, session)
@@ -212,7 +214,7 @@ class DocumentDataBase(DataBaseMainConnect):
         return document
 
 
-    @connection
+    @connection()
     async def delete_document(self, document_id: int, session: AsyncSession):
         """Мягкое удаление документа (установка activity = False)"""
         document = await self.get_document_by_id(document_id, session)
