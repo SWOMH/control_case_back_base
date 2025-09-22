@@ -16,7 +16,7 @@ def send_confirmation_email(to_email: str, confirmation_code: int) -> None:
 
     # Создаем Jinja2 окружение
     env = Environment(loader=FileSystemLoader(templates_dir))
-    template = env.get_template("confirmation_email.html")  # Загружаем шаблон
+    template = env.get_template("mail_conf.html")  # Загружаем шаблон
 
     # Рендерим шаблон с кодом
     html_content = template.render(confirmation_code=confirmation_code)
@@ -26,7 +26,8 @@ def send_confirmation_email(to_email: str, confirmation_code: int) -> None:
     message["From"] = DEV_CONSTANT.EMAIL_USERNAME
     message["To"] = to_email
     message["Subject"] = "Подтверждение регистрации"
-
+    print('Сообщение создано')
+    print(f'Отправляем на почту {to_email}')
     with smtplib.SMTP_SSL(
             host=DEV_CONSTANT.EMAIL_HOST,
             port=DEV_CONSTANT.EMAIL_PORT
@@ -35,4 +36,6 @@ def send_confirmation_email(to_email: str, confirmation_code: int) -> None:
             user=DEV_CONSTANT.EMAIL_USERNAME,
             password=DEV_CONSTANT.EMAIL_PASSWORD,
         )
+        print('Сообщение залогинино')
         smtp.send_message(msg=message)
+        print('Сообщение отправлено')

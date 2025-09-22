@@ -106,7 +106,7 @@ class AuthUsers(DataBaseMainConnect):
             raise UserTokenNotFoundException
 
         # Получаем пользователя
-        stmt = select(Users).options(selectinload(Users.balance)).where(
+        stmt = select(Users).where(
             Users.id == token_user_id)
         result = await session.execute(stmt)
         user: Users = result.scalar_one_or_none()
@@ -217,14 +217,11 @@ class AuthUsers(DataBaseMainConnect):
     #     return users, total_count
 
     @connection()
-    async def get_user_by_id(self, user_id: int, current_user: Users, session: AsyncSession) -> Users:
+    async def get_user_by_id(self, user_id: int, session: AsyncSession) -> Users:
         """
         Получение пользователя по ID с проверкой доступа
         """
-        stmt = select(Users).options(
-            selectinload(Users.balance),
-            selectinload(Users.groups)
-        ).where(Users.id == user_id)
+        stmt = select(Users).where(Users.id == user_id)
 
         # Фильтры доступа: менеджер видит только своих сотрудников
         # if not current_user.is_admin:
@@ -239,7 +236,7 @@ class AuthUsers(DataBaseMainConnect):
         if not user:
             raise UserNotFoundExists
 
-        return user
+        return user.login
 
     @connection()
     async def update_user(self, user_id: int, user_data: UserUpdateRequest, current_user: Users,
@@ -289,10 +286,7 @@ class AuthUsers(DataBaseMainConnect):
         """
         Активирует пользователя
         """
-        stmt = select(Users).options(
-            selectinload(Users.balance),
-            selectinload(Users.groups)
-        ).where(Users.id == user_id)
+        stmt = select(Users).where(Users.id == user_id)
 
         result = await session.execute(stmt)
         user = result.scalar_one_or_none()

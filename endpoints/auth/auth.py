@@ -60,7 +60,8 @@ async def send_message_confirmed(user_id: int):
     code = random.randint(1000, 9999)
     user_email = await db_auth.get_user_by_id(user_id)
     redis_db.set(f'{user_id}_code_confirmed', f'{code}', 300)
-    send_confirmation_email.delay(user_email, code) # Тута отправляем сообщение
+    # send_confirmation_email.delay(user_email, code) # Тута отправляем сообщение
+    send_confirmation_email(user_email, code)
     return {"message": "message send"}
 
 
@@ -71,11 +72,14 @@ async def message_confirmed(user_id: int, code: int):
     Сравнивает коды и в случае совпадения делает аккаунт активированным
     """
     code_r = redis_db.get(f'{user_id}_code_confirmed')
-    if code == code_r:
+    print(f'Получил код из редиса: {code_r}')
+    if str(code) == code_r.decode('utf-8'):
+        print('Коды совпали')
         await db_auth.activate_user(user_id)
-        return status.HTTP_200_OK
+        return {"message": "Account activated"}
     else:
-        return status.HTTP_401_UNAUTHORIZED
+        print(f'Коды не совпали {code} != {code_r}')
+        return {"message": "Code not matched"}
 
 
 @router.post("/login", response_model=TokenResponse)
