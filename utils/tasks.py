@@ -9,15 +9,18 @@ import os
 
 
 @celery_app.task
-def send_confirmation_email(to_email: str, confirmation_code: int) -> None:
+def send_confirmation_email(to_email: str, confirmation_code: int, template_type: str = 'mail_conf') -> None:
     # confirmation_code = code
     basedir = os.path.abspath(os.path.dirname(__file__))
     templates_dir = os.path.join(basedir, 'templates')  # папка с шаблонами
 
     # Создаем Jinja2 окружение
     env = Environment(loader=FileSystemLoader(templates_dir))
-    template = env.get_template("mail_conf.html")  # Загружаем шаблон
-
+    if template_type == 'mail_conf':
+        template = env.get_template("register_confirm.html")  # Загружаем шаблон
+    elif template_type == 'reset_password':
+        template = env.get_template("reset_password.html")  # Загружаем шаблон
+    
     # Рендерим шаблон с кодом
     html_content = template.render(confirmation_code=confirmation_code)
 

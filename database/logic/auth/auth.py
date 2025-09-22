@@ -239,6 +239,23 @@ class AuthUsers(DataBaseMainConnect):
         return user.login
 
     @connection()
+    async def get_user_by_email(self, email: str, session: AsyncSession) -> Users:
+        """
+        Получение пользователя по email
+        """
+        stmt = select(Users).where(Users.login == email)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if not user:
+            stmt = select(Users).where(Users.email == email)
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none()
+            if not user:
+                raise UserNotFoundExists
+        return user
+
+
+    @connection()
     async def update_user(self, user_id: int, user_data: UserUpdateRequest, current_user: Users,
                           session: AsyncSession) -> Users:
         """
@@ -320,5 +337,21 @@ class AuthUsers(DataBaseMainConnect):
         await session.commit()
         return True
 
+
+    @connection()
+    async def update_user_password(self, user_id: int, new_password: str, session: AsyncSession):
+        """
+        Обновление пароля пользователя
+        """
+        stmt = select(Users).where(Users.id == user_id)
+
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise UserNotFoundExists
+
+        user.password = get_password_hash(new_password)
+        await session.commit()
 
 db_auth = AuthUsers()

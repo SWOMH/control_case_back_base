@@ -182,6 +182,72 @@ async def refresh_token(
         expires_in=expires_in
     )
 
+@router.post("/password_reset_mail_send")
+async def password_reset_mail_send(
+        email: str) -> dict[str, str]:
+    """
+    Запрос сообщения на почту для сброса пароля
+    """
+    try:
+        user = await db_auth.get_user_by_email(email)
+    except UserNotFoundExists as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.details
+        )
+    code = random.randint(1000, 9999)
+    redis_db.set(f'{user.id}_code_reset', f'{code}', 300)
+    send_confirmation_email(user.login if user.login else user.email, code, 'reset_password')
+    return {"message": "Code sent"}
+
+
+@router.post("/password_reset_confirm_code")
+async def password_reset_confirm(
+        email: str,
+        code: int
+) -> dict[str, str]:
+    """
+    Подтверждение сброса пароля по коду
+    """
+    try:
+        user = await db_auth.get_user_by_email(email)
+    except UserNotFoundExists as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.details
+        )
+    code_r = redis_db.get(f'{user.id}_code_reset')
+    if str(code) == code_r.decode('utf-8'):
+        redis_db.set(f'{user.id}_reset_password_permission', 'True', 600)
+        return {"message": "Password reset confirmed"}
+    else:
+        return {"message": "Code not matched"}
+
+
+@router.post("/password_reset_confirm")
+async def password_reset_confirm(
+        email: str,
+        new_password: str
+) -> dict[str, str]:
+    """
+    Новый пароль после сброса пароля
+    """
+    try:
+        user = await db_auth.get_user_by_email(email)
+    except UserNotFoundExists as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.details
+        )
+    reset_password_permission = redis_db.get(f'{user.id}_reset_password_permission')
+    if reset_password_permission is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset not confirmed"
+        )
+    await db_auth.update_user_password(user.id, new_password)
+    return {"message": "Password reset confirmed"}
+
 
 @router.post("/logout")
 async def logout_user(
