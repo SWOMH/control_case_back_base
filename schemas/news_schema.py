@@ -15,7 +15,7 @@ class NewsResponse(BaseModel):
     like_count: int = Field(description='Кол-во лайков')
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class NewsCreate(BaseModel):

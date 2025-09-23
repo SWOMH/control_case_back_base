@@ -47,14 +47,14 @@ class TokenResponse(BaseModel):
     expires_in: int = Field(..., description="Время жизни access токена в секундах")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class GroupOut(BaseModel):
     id: int
     name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TokenData(BaseModel):

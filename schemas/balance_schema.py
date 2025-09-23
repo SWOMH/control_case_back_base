@@ -25,7 +25,7 @@ class UserBalanceOut(BaseModel):
     updated_at: datetime = Field(..., description="Время последнего обновления")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserBalanceResponse(UserBalanceOut):
@@ -58,7 +58,7 @@ class BalanceOperationBase(BaseModel):
     metadata_json: Optional[Dict[str, Any]] = Field(None, description='Метаданные в формате JSON')
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class BalanceOperationCreate(BalanceOperationBase):
