@@ -38,3 +38,12 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.group.dev.dependencies]
 uvicorn = {extras = ["standard"], version = "^0.35.0"}
 
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-mock = "^3.10.0"
+httpx = "^0.25.0"
+websockets = "^11.0.2"
+pytest-cov = "^4.1.0"
+faker = "^19.3.0"
+
