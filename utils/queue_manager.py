@@ -5,7 +5,7 @@ import asyncio
 import time
 from typing import Dict, List, Set, Optional, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import logging
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ class SupportQueueManager:
         """Обновление времени ожидания клиентов"""
         try:
             while self._running:
-                current_time = datetime.utcnow()
+                current_time = datetime.now(UTC)
                 
                 async with self._queue_lock:
                     for client in self.waiting_clients.values():
@@ -117,7 +117,7 @@ class SupportQueueManager:
         operator = self.operators[operator_id]
         operator.is_online = True
         operator.is_available = True
-        operator.last_activity = datetime.utcnow()
+        operator.last_activity = datetime.now(UTC)
         
         logger.info(f"Оператор {operator_id} ({operator_type}) в онлайн")
         
@@ -181,7 +181,7 @@ class SupportQueueManager:
                 queued_client = QueuedClient(
                     client_id=client_id,
                     chat_id=chat_id,
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(UTC),
                     priority=priority,
                     metadata=metadata or {}
                 )
@@ -258,7 +258,7 @@ class SupportQueueManager:
             # Назначаем чат
             self.chat_assignments[chat_id] = operator_id
             operator.current_chats.add(chat_id)
-            operator.last_activity = datetime.utcnow()
+            operator.last_activity = datetime.now(UTC)
             
             # Удаляем клиента из очереди
             await self.remove_client_from_queue(client_id)
@@ -278,7 +278,7 @@ class SupportQueueManager:
             if operator_id in self.operators:
                 operator = self.operators[operator_id]
                 operator.current_chats.discard(chat_id)
-                operator.last_activity = datetime.utcnow()
+                operator.last_activity = datetime.now(UTC)
                 
                 # Если оператор снова доступен, проверяем очередь
                 if operator.can_accept_chat:
@@ -306,7 +306,7 @@ class SupportQueueManager:
             # Назначаем новому оператору
             self.chat_assignments[chat_id] = new_operator_id
             self.operators[new_operator_id].current_chats.add(chat_id)
-            self.operators[new_operator_id].last_activity = datetime.utcnow()
+            self.operators[new_operator_id].last_activity = datetime.now(UTC)
         
         logger.info(f"Чат {chat_id} переведен с оператора {old_operator_id} на {new_operator_id}, причина: {reason}")
         return True

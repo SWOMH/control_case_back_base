@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -31,9 +31,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """Создает access токен"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.utcnow() + get_access_token_expire_delta()
+        expire = datetime.now(UTC) + get_access_token_expire_delta()
 
     to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, auth_config.SECRET_KEY, algorithm=auth_config.ALGORITHM)
@@ -44,9 +44,9 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     """Создает refresh токен"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.utcnow() + get_refresh_token_expire_delta()
+        expire = datetime.now(UTC) + get_refresh_token_expire_delta()
 
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, auth_config.SECRET_KEY, algorithm=auth_config.ALGORITHM)

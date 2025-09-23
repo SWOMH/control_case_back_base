@@ -4,7 +4,7 @@ Kafka Producer для отправки событий чата поддержк�
 import json
 import uuid
 import asyncio
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional, Dict, Any
 from aiokafka import AIOKafkaProducer
 import logging
@@ -70,7 +70,7 @@ class SupportChatKafkaProducer:
         event = ChatEvent(
             event_id=str(uuid.uuid4()),
             event_type=ChatEventType.CHAT_CREATED,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             chat_id=chat_id,
             user_id=user_id,
             metadata=metadata
@@ -83,7 +83,7 @@ class SupportChatKafkaProducer:
         event = ChatEvent(
             event_id=str(uuid.uuid4()),
             event_type=ChatEventType.MESSAGE_SENT,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             chat_id=chat_id,
             sender_id=sender_id,
             sender_type=sender_type,
@@ -97,7 +97,7 @@ class SupportChatKafkaProducer:
         event = ChatEvent(
             event_id=str(uuid.uuid4()),
             event_type=ChatEventType.OPERATOR_JOINED,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             chat_id=chat_id,
             user_id=operator_id,
             metadata={'operator_type': operator_type}
@@ -109,7 +109,7 @@ class SupportChatKafkaProducer:
         event = ChatEvent(
             event_id=str(uuid.uuid4()),
             event_type=ChatEventType.CHAT_CLOSED,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             chat_id=chat_id,
             user_id=closed_by_user_id,
             metadata={'reason': reason} if reason else None
@@ -123,7 +123,7 @@ class SupportChatKafkaProducer:
         event = SupportQueueEvent(
             event_id=str(uuid.uuid4()),
             event_type=SupportQueueEventType.CLIENT_WAITING,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             client_id=client_id,
             user_id=client_id,
             priority=priority,
@@ -136,7 +136,7 @@ class SupportChatKafkaProducer:
         event = SupportQueueEvent(
             event_id=str(uuid.uuid4()),
             event_type=SupportQueueEventType.CLIENT_REQUEST_REMOVED,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             client_id=client_id,
             user_id=client_id,
             chat_id=chat_id,
@@ -151,7 +151,7 @@ class SupportChatKafkaProducer:
         event = OperatorEvent(
             event_id=str(uuid.uuid4()),
             event_type=OperatorEventType.OPERATOR_ONLINE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             operator_id=operator_id,
             operator_type=operator_type,
             max_concurrent_chats=max_concurrent_chats,
@@ -164,7 +164,7 @@ class SupportChatKafkaProducer:
         event = OperatorEvent(
             event_id=str(uuid.uuid4()),
             event_type=OperatorEventType.OPERATOR_OFFLINE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             operator_id=operator_id,
             operator_type=operator_type
         )
@@ -175,7 +175,7 @@ class SupportChatKafkaProducer:
         event = OperatorEvent(
             event_id=str(uuid.uuid4()),
             event_type=OperatorEventType.OPERATOR_ACCEPT_CHAT,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             operator_id=operator_id,
             operator_type=operator_type,
             chat_id=chat_id,
@@ -191,7 +191,7 @@ class SupportChatKafkaProducer:
         event = AssignmentEvent(
             event_id=str(uuid.uuid4()),
             event_type=AssignmentEventType.CHAT_ASSIGNED,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             chat_id=chat_id,
             user_id=client_id,
             operator_id=operator_id,
@@ -206,7 +206,7 @@ class SupportChatKafkaProducer:
         event = AssignmentEvent(
             event_id=str(uuid.uuid4()),
             event_type=AssignmentEventType.CHAT_TRANSFERRED,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             chat_id=chat_id,
             user_id=client_id,
             operator_id=new_operator_id,
@@ -221,7 +221,7 @@ class SupportChatKafkaProducer:
         event = AssignmentEvent(
             event_id=str(uuid.uuid4()),
             event_type=AssignmentEventType.LAWYER_ASSIGNED,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             chat_id=chat_id,
             user_id=client_id,
             operator_id=lawyer_id,
@@ -238,7 +238,7 @@ class SupportChatKafkaProducer:
         event = AdminActionEvent(
             event_id=str(uuid.uuid4()),
             event_type=AdminActionType.FORCE_TRANSFER,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             admin_id=admin_id,
             chat_id=chat_id,
             target_operator_id=target_operator_id,
