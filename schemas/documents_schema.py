@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 # Базовые схемы для вложенных моделей без ID
@@ -20,6 +20,9 @@ class DocumentFieldResponse(DocumentFieldBase):
     id: int
     document_id: int
 
+    class Config:
+        from_attributes = True
+
 
 class DocumentTagsResponse(DocumentTagsBase):
     id: int
@@ -29,24 +32,20 @@ class DocumentTagsResponse(DocumentTagsBase):
 # Базовая схема документа без ID
 class DocumentBase(BaseModel):
     document_name: str = Field(..., description='Название документа(заголовок)')
-    document_description: str = Field(..., description='Описание документа')
-    path: str = Field(..., description='Путь/url до файла')
+    document_description: Optional[str] = Field(description='Описание документа')
+    # path: str = Field(..., description='Путь/url до файла')
     instruction: Optional[str] = Field(description='Инструкция для клиента (в каком случае нужен этот документ)')
     price: Optional[float] = Field(description="Цена за доступ к 1 документу")
     sale: bool = Field(default=False, description='Платный ли файл или нет. Если не указано - бесплатен')
     limit_free: Optional[int] = Field(description='Кол-во бесплатных созданий документа в случае, если он платен')
 
-    @field_validator('price')
-    def validate_price(cls, v, values):
-        if 'sale' in values and values['sale'] and (v is None or v <= 0):
+    @model_validator(mode='after')
+    def check_price_and_limit(cls, model):
+        if model.sale and (model.price is None or model.price <= 0):
             raise ValueError('Платный документ должен иметь положительную цену')
-        return v
-
-    @field_validator('limit_free')
-    def validate_limit_free(cls, v, values):
-        if 'sale' in values and values['sale'] and v is not None and v < 0:
+        if model.sale and model.limit_free is not None and model.limit_free < 0:
             raise ValueError('Лимит бесплатных использований не может быть отрицательным')
-        return v
+        return model
 
 
 # Схема для создания документа (с вложенными объектами без ID)
@@ -58,10 +57,11 @@ class DocumentSchemaCreate(DocumentBase):
 # Схема для ответа (с ID и вложенными объектами с ID)
 class DocumentSchemaResponse(DocumentBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
-    fields: List[DocumentFieldResponse]
+    field: List[DocumentFieldResponse]
     # tags: List[DocumentTagsResponse]
+
+    class Config:
+        from_attributes = True
 
 
 class DocumentGenerateFieldsSchema(BaseModel):
