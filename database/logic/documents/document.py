@@ -19,7 +19,7 @@ from datetime import date
 class DocumentDataBase(DataBaseMainConnect):
 
     @connection()
-    async def create_document(self, document: DocumentSchemaCreate, session: AsyncSession):
+    async def create_document(self, document: DocumentSchemaCreate, document_path: str, session: AsyncSession):
         try:
             # 1. Проверка существования документа с таким же именем
             stmt = select(DocumentsApp).where(
@@ -47,7 +47,7 @@ class DocumentDataBase(DataBaseMainConnect):
             new_document = DocumentsApp(
                 document_name=document.document_name,
                 document_description=document.document_description,
-                path=document.path,
+                path=document_path,
                 instruction=document.instruction,
                 price=document.price,
                 sale=document.sale,
@@ -103,14 +103,12 @@ class DocumentDataBase(DataBaseMainConnect):
             #             )
             #
             #         session.add(association)
-
-                await session.flush()
-
+            
             # 6. Фиксируем изменения
             await session.commit()
 
             # 7. Возвращаем созданный документ с полями
-            return await self.get_document_by_id(new_document.id, session)
+            return await self.get_document_by_id(new_document.id)
 
         except SQLAlchemyError as e:
             await session.rollback()
@@ -121,7 +119,7 @@ class DocumentDataBase(DataBaseMainConnect):
 
 
     @connection()
-    async def check_user_can_generate(self, user: Users, document_price: float) -> bool:
+    async def check_user_can_generate(self, user: Users, document_price: float, session: AsyncSession) -> bool:
         """Проверяет возможность создания документа (если документ платный)"""
 
         if user.is_admin:

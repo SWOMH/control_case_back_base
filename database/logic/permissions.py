@@ -12,7 +12,7 @@ from database.models.users import Group, Users, user_group_association, group_pe
 
 class DatabasePermissions(DataBaseMainConnect):
 
-    @connection
+    @connection()
     async def get_all_permissions(self, user: Users, session: AsyncSession):
         """
         Получение всех прав для каждой группы пользователя

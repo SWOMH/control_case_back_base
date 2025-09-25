@@ -1,5 +1,5 @@
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from config.constants import DEV_CONSTANT
 from database.logic.documents.document import db_documents
 from database.models.users import Users
@@ -60,7 +60,7 @@ async def generate_document(document: DocumentGenerateDocSchema,
     context = {}
     for field in document.fields:
         # Находим описание поля из базы
-        field_meta = next((f for f in db_doc.fields if f.id == field.id), None)
+        field_meta = next((f for f in db_doc.field if f.id == field.id), None)
         if not field_meta:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Поле с id={field.id} не найдено")
         context[field_meta.service_field] = field.value
@@ -73,7 +73,7 @@ async def generate_document(document: DocumentGenerateDocSchema,
     output_dir = Path("generated_docs")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    unique_name = f"doc_{uuid.uuid4().hex}.docx"
+    unique_name = f"doc__{datetime.datetime.now(datetime.timezone.utc).strftime("%d_%m_%Y")}__{uuid.uuid4().hex}.docx"
     output_path = output_dir / unique_name
 
     tpl.save(output_path)
@@ -102,9 +102,15 @@ async def generate_pdf(document: DocumentGenerateDocSchema,
 
 
 @router.post('/create', response_model=DocumentSchemaResponse, status_code=status.HTTP_201_CREATED)
-async def add_document(document: DocumentSchemaCreate,
+async def add_document(document: str = Form(...),
                        current_user: Users = Depends(require_admin_or_permission(Permissions.CREATE_DOCUMENTS)),
                        file: UploadFile = File(...)):
+
+    # Парсим JSON-строку в Pydantic-модель (pydantic v2)
+    try:
+        document_obj = DocumentSchemaCreate.model_validate_json(document)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid document JSON: {e}")
     try:
         # Проверяем тип файла
         allowed_extensions = {'.docx', '.xlsx', '.doc', '.xls'}
@@ -119,7 +125,7 @@ async def add_document(document: DocumentSchemaCreate,
         # TODO: Не знаю как сейвить либо "{Название_компании}{id_на_s3}.docx" или как-то иначе
         # unique_filename = f"{uuid.uuid4()}{file_extension}"
         COMPANY_NAME = DEV_CONSTANT.company_name
-        date = datetime.now().strftime("%d_%m_%Y")
+        date = datetime.datetime.now(datetime.timezone.utc).strftime("%d_%m_%Y")
         id = uuid.uuid4()
         unique_filename = f"{COMPANY_NAME}__{date}__{id}{file_extension}"
 
@@ -134,8 +140,8 @@ async def add_document(document: DocumentSchemaCreate,
 
 
         # Здесь код для сохранения в базу данных
-        # document = await Document.create(document, document_path)
+        document = await db_documents.create_document(document_obj, str(file_path))
 
         return document
-    except:
-        ...
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error creating document: {e}")
