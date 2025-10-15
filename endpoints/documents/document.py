@@ -94,7 +94,7 @@ async def generate_pdf(document: DocumentGenerateDocSchema,
     result = await generate_document(document, user)
     docx_path = Path("static") / result["url"].lstrip("/")
 
-    pdf_name = docx_path.stem + ".pdf"
+    pdf_name = docx_path.stem + f"_{datetime.datetime.now(datetime.timezone.utc).strftime("%d_%m_%Y")}.pdf"
     pdf_path = docx_path.parent / pdf_name
 
     convert(docx_path, pdf_path)
@@ -113,13 +113,13 @@ async def add_document(document: str = Form(...),
         raise HTTPException(status_code=400, detail=f"Invalid document JSON: {e}")
     try:
         # Проверяем тип файла
-        allowed_extensions = {'.docx', '.xlsx', '.doc', '.xls'}
+        allowed_extensions = {'.docx', '.doc'}
         file_extension = Path(file.filename).suffix.lower()
 
         if file_extension not in allowed_extensions:
             raise HTTPException(
                 status_code=400,
-                detail="Недопустимый формат файла. Разрешены: .docx, .xlsx, .doc, .xls"
+                detail="Недопустимый формат файла. Разрешены: .docx, .doc"
             )
 
         # TODO: Не знаю как сейвить либо "{Название_компании}{id_на_s3}.docx" или как-то иначе

@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy.sql.functions import coalesce
 from database.main_connection import DataBaseMainConnect
 from database.decorator import connection
 from config.constants import DEV_CONSTANT
-from sqlalchemy import select, func
+from sqlalchemy import select, func, exists, or_, case
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models.news_feed import Post, Like, Comment
+from database.models.news_feed import Media, MediaType, Post, Like, Comment
 from exceptions.database_exc.news import NewsIsEmptyException
 from schemas.news_schema import NewsCreate, NewsModeratedSchema, NewsUpdate
 from config.settings import settings
@@ -16,17 +17,13 @@ from config.settings import settings
 class NewsDataBase(DataBaseMainConnect):
 
     @connection()
-    async def get_news_modeled(self, session: AsyncSession):
-        """
-        Получение новостей которые уже промоделировали и готовы к публекации
-        """
-        current_time = datetime.now(timezone.utc)  # Для сравнения с timezone-aware датами
+    async def get_news_modeled(self, session: AsyncSession, user_id: int | None = None):
+        current_time = datetime.now(timezone.utc)
 
-        # Подзапросы для агрегации лайков и комментариев
         likes_subquery = (
             select(
-                Like.post_id,
-                func.count(Like.id).label('like_count')
+                Like.post_id.label("post_id"),
+                func.count(Like.id).label("like_count")
             )
             .group_by(Like.post_id)
             .subquery()
@@ -34,49 +31,52 @@ class NewsDataBase(DataBaseMainConnect):
 
         comments_subquery = (
             select(
-                Comment.post_id,
-                func.count(Comment.id).label('comment_count')
+                Comment.post_id.label("post_id"),
+                func.count(Comment.id).label("comment_count")
             )
-            .where(Comment.deleted_at.is_(None))  # Исключаем удалённые комментарии
+            .where(Comment.deleted_at.is_(None))
             .group_by(Comment.post_id)
             .subquery()
         )
 
-        # Основной запрос с объединением данных
+        time_condition = or_(Post.time_published.is_(None), Post.time_published <= current_time)
+
+        base_conditions = [
+            Post.deleted_at.is_(None),
+            Post.published == True,
+            time_condition
+        ]
         if DEV_CONSTANT.MODIFIED_NEWS:
-            stmt = (
-                select(
-                    Post,
-                    coalesce(likes_subquery.c.like_count, 0).label('like_count'),
-                    coalesce(comments_subquery.c.comment_count, 0).label('comment_count')
-                )
-                .outerjoin(likes_subquery, likes_subquery.c.post_id == Post.id)
-                .outerjoin(comments_subquery, comments_subquery.c.post_id == Post.id)
-                .where(
-                    Post.moderated == True,
-                    Post.time_published >= current_time,
-                    Post.published == True
-                )
-            )
-        else:
-            stmt = (
-                select(
-                    Post,
-                    coalesce(likes_subquery.c.like_count, 0).label('like_count'),
-                    coalesce(comments_subquery.c.comment_count, 0).label('comment_count')
-                )
-                .outerjoin(likes_subquery, likes_subquery.c.post_id == Post.id)
-                .outerjoin(comments_subquery, comments_subquery.c.post_id == Post.id)
-                .where(
-                    Post.time_published >= current_time,
-                    Post.published == True
-                )
-            )
+            base_conditions.append(Post.moderated == True)
+
+        select_cols = [
+            Post,
+            coalesce(likes_subquery.c.like_count, 0).label("like_count"),
+            coalesce(comments_subquery.c.comment_count, 0).label("comment_count"),
+        ]
+
+        if user_id is not None:
+            liked_exists = exists(
+                select(1).where(Like.post_id == Post.id, Like.user_id == user_id)
+            ).label("liked_by_user")
+            select_cols.append(liked_exists)
+
+        stmt = (
+            select(*select_cols)
+            .outerjoin(likes_subquery, likes_subquery.c.post_id == Post.id)
+            .outerjoin(comments_subquery, comments_subquery.c.post_id == Post.id)
+            .where(*base_conditions)
+            # подгружаем media чтобы избежать ленивой загрузки после закрытия сессии
+            .options(selectinload(Post.media))
+            .order_by(Post.time_published.desc().nullslast(), Post.time_created.desc())
+        )
 
         result = await session.execute(stmt)
         rows = result.all()
+
         if not rows:
             raise NewsIsEmptyException
+
         return rows
 
     @connection()
@@ -94,7 +94,9 @@ class NewsDataBase(DataBaseMainConnect):
             self,
             news_data: NewsCreate,
             author_id: int,
-            session: AsyncSession
+            session: AsyncSession,
+            image_paths: List[str] | str | None = None,
+            video_paths: List[str] | str | None = None            
     ) -> Post:
         # Подготавливаем данные для создания
         post_dict = news_data.dict(exclude_unset=True)
@@ -112,6 +114,26 @@ class NewsDataBase(DataBaseMainConnect):
 
         session.add(post)
         await session.flush()
+        await session.refresh(post)
+        
+        if image_paths or video_paths:
+            if image_paths:
+                for image_path in image_paths:
+                    image = Media(
+                        url=image_path,
+                        post_id=post.id,
+                        type=MediaType.IMAGE
+                    )
+                    session.add(image)
+            if video_paths:
+                for video_path in video_paths:
+                    video = Media(
+                        url=video_path,
+                        post_id=post.id,
+                        type=MediaType.VIDEO
+                    )
+                    session.add(video)
+        await session.commit()
         await session.refresh(post)
         return post
 

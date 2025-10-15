@@ -115,5 +115,14 @@ async def get_current_active_user(current_user: Users = Depends(get_current_user
         )
     return current_user
 
+async def get_current_user_optional(current_user: Users = Depends(get_current_user)) -> Users:
+    """Проверяем, авторизован пользователь или нет. Эт для постов, чтоб пробивать на лайки"""
+    try:
+        if not current_user.is_active:
+            return None
+        else:
+            return current_user
+    except:
+        return None
 
 
